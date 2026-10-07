@@ -49,7 +49,7 @@
 }
 .hc-crave { color: var(--tint); transition: color .8s; }
 .hc-lede { margin: 24px 0 0; max-width: 36ch; font-size: 17px; line-height: 1.6; color: var(--label-2); }
-.hc-detail { position: relative; padding: 30px 32px; border-radius: 28px; background: linear-gradient(160deg, rgb(var(--fg-rgb) / 0.07), rgb(var(--fg-rgb) / 0.02)); border: 1px solid var(--hairline); min-height: 300px; display: flex; flex-direction: column; }
+.hc-detail { position: relative; padding: 30px 32px; border-radius: 28px; background: linear-gradient(160deg, rgb(var(--fg-rgb) / 0.07), rgb(var(--fg-rgb) / 0.02)); border: 1px solid var(--hairline); height: 310px; display: flex; flex-direction: column; }
 .hc-detail::before { content: ''; position: absolute; left: 32px; top: 0; width: 56px; height: 3px; border-radius: 3px; background: var(--tint); transition: background .8s; }
 .hc-detail__in { flex: 1; animation: hFade .6s cubic-bezier(.2,.8,.2,1) both; }
 .hc-detail__sub { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tint); }
@@ -297,7 +297,7 @@
     line-height: 0.9;
   }
   .hc-lede { max-width: 100%; text-align: center; }
-  .hc-detail { padding: 24px 22px; min-height: 0; }
+  .hc-detail { padding: 24px 22px; height: 300px; }
   .hc-detail::before { left: 22px; }
   /* Smaller card size for mobile — spring handles all motion */
   .hc-fan { --cw: 150px; --step: 13deg; --origin: 300%; margin-top: 52px; height: calc(var(--cw) * 1.42 + 130px); }
