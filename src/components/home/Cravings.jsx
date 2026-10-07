@@ -83,7 +83,6 @@ export default function Cravings() {
   /* React state — only for things React actually needs to re-render */
   const [active, setActive] = useState(Math.floor(N / 2));
   const [dealt, setDealt] = useState(false);
-  const [shuffling, setShuffling] = useState(false);
   const [settled, setSettled] = useState(false);
 
   /* Spring + drag live entirely outside React render */
@@ -108,7 +107,7 @@ export default function Cravings() {
      center and back down as it moves away.                               */
   const applyOffset = useCallback((off) => {
     offsetRef.current = off;
-    const STEP = 11; // deg per card slot
+    const STEP = 13; // deg per card slot
 
     cardRefs.current.forEach((el, i) => {
       if (!el) return;
@@ -281,30 +280,12 @@ export default function Cravings() {
     if (e.key === "ArrowLeft")  { e.preventDefault(); snapTo(Math.round(offsetRef.current) - 1); }
     if (e.key === "Enter") navigate(urlFor(cats[active]));
   };
-
-  /* ── Shuffle ── */
-  const shuffle = () => {
-    if (shuffling) return;
-    if (prefersReduced()) { snapTo(Math.floor(Math.random() * N), true); return; }
-    setShuffling(true);
-    const target = (Math.round(offsetRef.current) + 2 + Math.floor(Math.random() * (N - 2))) % N;
-    let k = 0;
-    const flicks = 9;
-    const tick = () => {
-      k++;
-      snapTo(k === flicks ? target : Math.floor(Math.random() * N));
-      if (k < flicks) setTimeout(tick, 60 + k * k * 9);
-      else setTimeout(() => setShuffling(false), 500);
-    };
-    tick();
-  };
-
   const cur = cats[active];
   const tint = warm(cur.color);
 
   return (
     <section ref={root}
-      className={`theme-ember hc-root${dealt ? " is-dealt" : ""}${settled ? " is-settled" : ""}${shuffling ? " is-shuffling" : ""}`}
+      className={`theme-ember hc-root${dealt ? " is-dealt" : ""}${settled ? " is-settled" : ""}`}
       style={{ "--tint": tint }}>
       <div className="hc-glow" aria-hidden />
       <div className="h-wrap hc-top">
@@ -326,10 +307,6 @@ export default function Cravings() {
           </div>
           <div className="hc-detail__ctas">
             <Link to={urlFor(cur)} className="hc-open">Open {cur.title} <span>&#8594;</span></Link>
-            <button type="button" className="hc-shuffle" onClick={shuffle} disabled={shuffling}>
-              <span className="hc-dice" aria-hidden><i /><i /><i /><i /><i /></span>
-              {shuffling ? "Shuffling\u2026" : "Shuffle"}
-            </button>
           </div>
         </div>
       </div>

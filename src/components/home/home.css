@@ -62,16 +62,10 @@
 .hc-open:hover { transform: translateY(-2px); }
 .hc-open span { transition: transform .35s; }
 .hc-open:hover span { transform: translateX(4px); }
-.hc-shuffle { display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 100px; border: 1px solid var(--hairline); background: transparent; color: var(--label); font: 700 13px var(--font-text); cursor: pointer; transition: border-color .3s, background .3s; }
-.hc-shuffle:hover { border-color: rgb(var(--fg-rgb) / 0.4); background: rgb(var(--fg-rgb) / 0.05); }
-.hc-dice { position: relative; width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid currentColor; display: inline-block; }
-.hc-dice i { position: absolute; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
-.hc-dice i:nth-child(1) { left: 3px; top: 3px; } .hc-dice i:nth-child(2) { right: 3px; top: 3px; } .hc-dice i:nth-child(3) { left: 50%; top: 50%; transform: translate(-50%, -50%); }
-.hc-dice i:nth-child(4) { left: 3px; bottom: 3px; } .hc-dice i:nth-child(5) { right: 3px; bottom: 3px; }
-.hc-root.is-shuffling .hc-dice { animation: hRoll .5s linear infinite; }
+
 
 /* pan-y: browser handles vertical scroll freely; JS takes over only when horizontal intent is confirmed */
-.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 9deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: pan-y; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; contain: layout style; }
+.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 13deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: pan-y; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; contain: layout style; }
 .hc-fan:active { cursor: grabbing; }
 .hc-fan:focus-visible .hc-card.is-active .hc-card__face { outline: 2px solid var(--tint); outline-offset: 6px; }
 .hc-table { position: absolute; left: 50%; bottom: -60%; width: min(1200px, 120vw); aspect-ratio: 2.4 / 1; transform: translateX(-50%); border-radius: 50%; border: 1px dashed rgb(var(--fg-rgb) / 0.12); background: radial-gradient(closest-side, rgb(var(--fg-rgb) / 0.035), transparent); pointer-events: none; }
@@ -100,7 +94,7 @@
 .hc-dots { display: flex; gap: 8px; }
 .hc-dots button { width: 8px; height: 8px; padding: 0; border: 0; border-radius: 8px; background: rgb(var(--fg-rgb) / 0.2); cursor: pointer; transition: width .4s cubic-bezier(.2,.8,.2,1), background .4s; }
 .hc-dots button.is-on { width: 28px; background: var(--tint); }
-@keyframes hRoll { to { transform: rotate(360deg); } }
+
 
 /* ─── Signatures (horizontal rail) ───────────────────────── */
 .hs-root { position: relative; overflow: hidden; height: 100vh; min-height: 640px; }
@@ -306,7 +300,7 @@
   .hc-detail { padding: 24px 22px; min-height: 0; }
   .hc-detail::before { left: 22px; }
   /* Smaller card size for mobile — spring handles all motion */
-  .hc-fan { --cw: 150px; --step: 11deg; --origin: 300%; margin-top: 52px; height: calc(var(--cw) * 1.42 + 130px); }
+  .hc-fan { --cw: 150px; --step: 13deg; --origin: 300%; margin-top: 52px; height: calc(var(--cw) * 1.42 + 130px); }
   .hc-card { bottom: 86px; }
   /* Deal-in only: shrink transition duration on mobile for faster reveal */
   .hc-root:not(.is-settled) .hc-card { transition-duration: .5s !important; }
