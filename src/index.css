@@ -1,0 +1,419 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  /* ── Type (system first: SF Pro on Apple platforms, Inter elsewhere) ── */
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  --font-sans: var(--font-text);
+  /* ── Light theme (default) — Apple "Santorini": white, mist grey, one blue ── */
+  --bg: #F7F3EC;
+  --bg-2: #EFE7D9;
+  --bg-3: #FFFDF8;
+  --fill-2: #E3D9C6;
+  --label: #0B1424;
+  --label-strong: #0B1424;
+  --label-2: #2C3548;
+  --label-3: #5D6578;
+  --label-4: #858B9A;
+  --label-5: #CFC6B4;
+  --fg-rgb: 11 20 36;
+  --bg-rgb: 247 243 236;
+  --hairline: rgba(11,20,36,0.12);
+  --accent: #1D4ED8;
+  --accent-hi: #2F6BFF;
+  --accent-rgb: 29 78 216;
+  --on-accent: #FFFFFF;
+  --material-bar: rgba(247,243,236,0.72);
+  --material-sheet: rgba(255,253,248,0.86);
+  --material-blur: saturate(180%) blur(20px);
+}
+
+html {
+  /* scroll-behavior: smooth removed — conflicts with GSAP ScrollTrigger
+     and causes double-scroll jank on mobile. GSAP handles easing. */
+}
+
+body {
+  @apply font-body antialiased;
+  background-color: var(--bg);
+  color: var(--label);
+  font-family: var(--font-text);
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+/* When the hero is mounted we add `has-hero` to body so the page
+   background matches the hero and the ScrollTrigger pin spacer
+   doesn't reveal a white band while the hero is pinned. */
+body.has-hero {
+  background-color: #000000;
+  color: var(--label);
+}
+
+/* Strong overrides while hero is active to beat Tailwind utility classes */
+html.has-hero,
+body.has-hero,
+.has-hero #root,
+.has-hero .min-h-screen {
+  background-color: #070B14 !important;
+  color: #F7F3EC !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+::selection {
+  background: rgba(29,78,216,0.22);
+}
+
+button, input, textarea, select {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+@keyframes bounce-slow {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(12deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.bg-scrim {
+  background: linear-gradient(
+    to bottom,
+    rgba(29,29,31, 0.2) 0%,
+    rgba(29,29,31, 0.5) 50%,
+    rgba(29,29,31, 0.85) 100%
+  );
+}
+
+.animate-wave {
+  animation: wave 4.5s ease-in-out infinite;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.text-shadow-soft {
+  text-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.heading-display {
+  font-family: var(--font-display);
+}
+
+.section-heading {
+  font-family: var(--font-display);
+}
+
+.label-uppercase {
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ohana-experience {
+  background: #F5F5F7;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at top left, rgba(255,255,255,0.04), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(255,255,255,0.03), transparent 16%);
+  pointer-events: none;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MOBILE GPU PERFORMANCE — ≤ 768px
+   Strategy: Only transform + opacity are GPU-composited.
+   Everything else (filter, backdrop-filter, box-shadow transitions)
+   triggers a full software rasterisation pass every frame → jank.
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* 1. Kill the fixed body overlay — creates a compositing context
+        across the entire page, forcing a repaint on every scroll tick */
+  body::before { display: none !important; }
+
+  /* 2. Kill every backdrop-filter globally — the #1 GPU killer.
+        Each element needs its own compositor layer + samples pixels
+        behind it every frame. ~5ms/frame penalty on mobile. */
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* 3. Hide decorative elements with expensive CSS filters */
+  .oh4-fog,
+  .oh4-bg-glow,
+  .oh4-bg-circle,
+  .oh4-grain,
+  .ps-grain,
+  .ps-ambient,
+  .oh4-stamp {
+    display: none !important;
+  }
+
+  /* 4. content-visibility: auto — skip layout + paint for off-screen
+        sections. Saves 40-80ms per section on first scroll. */
+  .ps-root,
+  .story-section,
+  .oe-section,
+  .hf-wrap,
+  .tr-row-wrap {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100vh;
+  }
+
+  /* 5. Pre-promote key animated elements to compositor layers
+        so GSAP doesn't cause a jank spike when it starts animating */
+  .oh4-text-layer,
+  .oh4-menu-panel,
+  .oh4-stats-bar,
+  .oh4-cat-bar {
+    transform: translateZ(0);
+  }
+
+  /* 6. Promote infinite marquee rows to compositor thread */
+  .tr-row {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+
+  /* 7. Enable native momentum scroll on iOS for clipped containers */
+  .oh4-hero,
+  .hf-wrap,
+  .ps-root {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ═════ Apple-style system layer ═════ */
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+img { image-rendering: auto; }
+
+/* Translucent material — used by the nav bar and sheets */
+.material-bar {
+  background: var(--material-bar);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+.material-sheet {
+  background: var(--material-sheet);
+  -webkit-backdrop-filter: var(--material-blur);
+  backdrop-filter: var(--material-blur);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .material-bar, .material-sheet {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--bg-2);
+  }
+}
+@media (prefers-contrast: more) {
+  :root { --label-2: #1D1D1F; --label-3: #424245; --hairline: rgba(0,0,0,0.4); }
+  .theme-dark { --label-2: #D1D1D6; --label-3: #C7C7CC; }
+  .material-bar, .material-sheet { background: var(--bg); border-color: rgb(var(--fg-rgb) / 0.4) !important; }
+}
+
+/* Dark "stage" sections (hero, photo-led and night scenes). Every
+   colour is a variable, so tagging a section re-themes its subtree. */
+.theme-dark {
+  --bg: #070B14;
+  --bg-2: #0D1424;
+  --bg-3: #121B30;
+  --fill-2: #1B2640;
+  --label: #F7F3EC;
+  --label-strong: #FFFDF8;
+  --label-2: #C9C2B3;
+  --label-3: #9097A8;
+  --label-4: #6B7285;
+  --label-5: #2E3850;
+  --fg-rgb: 247 243 236;
+  --bg-rgb: 7 11 20;
+  --hairline: rgba(247,243,236,0.12);
+  --accent: #E9B44C;
+  --accent-hi: #F5C96B;
+  --accent-rgb: 233 180 76;
+  --on-accent: #0B1424;
+  --material-bar: rgba(11,17,31,0.72);
+  --material-sheet: rgba(13,20,36,0.82);
+  color: var(--label);
+}
+
+/* ═════ Premium layer — ink & porcelain, cobalt by day, gold by night ═════ */
+/* Dark stages carry a soft Aegean aurora + warm candle glow behind content. */
+section.theme-dark, div.theme-dark#menu-gallery {
+  background-image:
+    radial-gradient(1100px 620px at 88% -8%, rgba(47,107,255,0.20), transparent 62%),
+    radial-gradient(900px 520px at -6% 108%, rgba(233,180,76,0.12), transparent 60%) !important;
+  background-color: var(--bg) !important;
+}
+/* Fine top hairline where a dark stage meets porcelain — light catching the edge */
+section.theme-dark { box-shadow: inset 0 1px 0 rgba(247,243,236,0.06); }
+/* Light sections get a whisper of warm paper depth */
+body { background-image: radial-gradient(1400px 700px at 50% -200px, rgba(29,78,216,0.05), transparent 70%); background-attachment: fixed; }
+::selection { background: rgba(29,78,216,0.22); }
+.theme-dark ::selection { background: rgba(233,180,76,0.32); }
+
+/* Aegean cobalt "signature" stages — the brand colour at full volume */
+.theme-cobalt {
+  --bg: #1A3BB0;
+  --bg-2: #1F45C4;
+  --bg-3: #2550D6;
+  --fill-2: #2F5BE0;
+  --label: #FFFDF8;
+  --label-strong: #FFFFFF;
+  --label-2: #DCE4FF;
+  --label-3: #B4C3F5;
+  --label-4: #93A6E8;
+  --label-5: #4A69D8;
+  --fg-rgb: 255 253 248;
+  --bg-rgb: 26 59 176;
+  --hairline: rgba(255,253,248,0.18);
+  --accent: #F5C96B;
+  --accent-hi: #FFD98A;
+  --accent-rgb: 245 201 107;
+  --on-accent: #0B1424;
+  color: var(--label);
+}
+section.theme-cobalt {
+  background-image:
+    radial-gradient(1000px 560px at 10% -10%, rgba(120,170,255,0.35), transparent 60%),
+    radial-gradient(900px 600px at 100% 110%, rgba(7,11,20,0.45), transparent 60%) !important;
+  background-color: var(--bg) !important;
+}
+
+/* ═════ Home stage family — one dark world, three moods ═════
+   ink + saffron gold (hero, favourites, reviews) · espresso + amber
+   (palate, story) · midnight + champagne (experience) · cobalt finale */
+.theme-ember {
+  --bg: #0E0907;
+  --bg-2: #17100B;
+  --bg-3: #1E1510;
+  --fill-2: #2A1E16;
+  --label: #FBF4EA;
+  --label-strong: #FFFAF2;
+  --label-2: #D8C9B6;
+  --label-3: #A8957F;
+  --label-4: #7D6C5A;
+  --label-5: #3A2C22;
+  --fg-rgb: 251 244 234;
+  --bg-rgb: 14 9 7;
+  --hairline: rgba(251,244,234,0.12);
+  --accent: #F0A04B;
+  --accent-hi: #FFB867;
+  --accent-rgb: 240 160 75;
+  --on-accent: #1A0F08;
+  color: var(--label);
+}
+section.theme-ember {
+  background-image:
+    radial-gradient(1000px 600px at 15% -10%, rgba(240,160,75,0.16), transparent 60%),
+    radial-gradient(900px 600px at 100% 100%, rgba(178,58,46,0.12), transparent 60%) !important;
+  background-color: var(--bg) !important;
+}
+.theme-midnight {
+  --bg: #060D24;
+  --bg-2: #0B1636;
+  --bg-3: #101E45;
+  --fill-2: #18295A;
+  --label: #F4F1EA;
+  --label-strong: #FFFFFF;
+  --label-2: #C8CEE0;
+  --label-3: #8F9AB8;
+  --label-4: #66729A;
+  --label-5: #24345F;
+  --fg-rgb: 244 241 234;
+  --bg-rgb: 6 13 36;
+  --hairline: rgba(244,241,234,0.12);
+  --accent: #E8D3A2;
+  --accent-hi: #F4E4BE;
+  --accent-rgb: 232 211 162;
+  --on-accent: #060D24;
+  color: var(--label);
+}
+section.theme-midnight {
+  background-image:
+    radial-gradient(1100px 650px at 80% 0%, rgba(80,120,255,0.22), transparent 60%),
+    radial-gradient(800px 500px at 0% 100%, rgba(232,211,162,0.10), transparent 60%) !important;
+  background-color: var(--bg) !important;
+}
+/* Hairline seams between stages — light catching the edge */
+.home-stage > section + section, .home-stage > div + section { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+/* Saffron-gold inverse finale — the warmest note, ink type on gold */
+.theme-gold {
+  --bg: #E7B04A;
+  --bg-2: #EDBD5E;
+  --bg-3: #F2C873;
+  --fill-2: #D99E35;
+  --label: #0B1424;
+  --label-strong: #070B14;
+  --label-2: #2B2A26;
+  --label-3: #5A4A2A;
+  --label-4: #7A6436;
+  --label-5: #C99634;
+  --fg-rgb: 11 20 36;
+  --bg-rgb: 231 176 74;
+  --hairline: rgba(11,20,36,0.18);
+  --accent: #0B1424;
+  --accent-hi: #1B2640;
+  --accent-rgb: 11 20 36;
+  --on-accent: #F5C96B;
+  color: var(--label);
+}
+section.theme-gold {
+  background-image:
+    radial-gradient(1000px 600px at 85% -10%, rgba(255,236,190,0.55), transparent 60%),
+    radial-gradient(900px 600px at 0% 110%, rgba(200,85,61,0.22), transparent 60%) !important;
+  background-color: var(--bg) !important;
+}
+
+.theme-dark, .theme-ember, .theme-midnight, .theme-cobalt { color-scheme: dark; }
+.theme-gold { color-scheme: light; }
+/* Warm-only glow (no blue) for Reservations & Contact ink stages */
+section.theme-dark.warm-glow {
+  background-image:
+    radial-gradient(1100px 620px at 88% -8%, rgba(233,180,76,0.14), transparent 62%),
+    radial-gradient(900px 520px at -6% 108%, rgba(200,85,61,0.10), transparent 60%) !important;
+  background-color: #0A0907 !important;
+}

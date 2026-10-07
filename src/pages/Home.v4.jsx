@@ -1,0 +1,857 @@
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import HeroSection from '../components/HeroSection';
+import PalateShowcase from '../components/PalateShowcase';
+import HouseFavourites from '../components/Housefavourites';
+import OhanaExperience from '../components/OhanaExperience';
+import { useContent } from '../content/ContentContext';
+import { defaultStory, defaultReviews } from '../content/defaults';
+
+gsap.registerPlugin(ScrollTrigger);
+
+// ─── STORY SECTION (redesigned) ──────────────────────────────────
+const StorySection = () => {
+  const sectionRef = useRef(null);
+  const headRef    = useRef(null);
+  const imgRef     = useRef(null);
+  const bodyRef    = useRef(null);
+  const pillsRef   = useRef(null);
+
+  /* Editable numbers — /admin → Home Page → Story numbers */
+  const contentCtx = useContent();
+  const story = (contentCtx && contentCtx.content && contentCtx.content.story) || defaultStory;
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set([headRef.current, imgRef.current, bodyRef.current, pillsRef.current], { opacity: 0, y: 48 });
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'top 80%',
+        once: true,
+        onEnter: () => {
+          const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+          tl.to(headRef.current,  { opacity: 1, y: 0, duration: 1.1 }, 0)
+            .to(imgRef.current,   { opacity: 1, y: 0, duration: 1.0 }, 0.12)
+            .to(bodyRef.current,  { opacity: 1, y: 0, duration: 0.9 }, 0.22)
+            .to(pillsRef.current, { opacity: 1, y: 0, duration: 0.8 }, 0.34);
+        },
+      });
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  const MILESTONES = [
+    { year: '2022', label: 'Founded', desc: 'Opened above Gar-Ali, Jorhat' },
+    { year: '2023', label: 'Loved', desc: '1,000+ guests. 4.8★ avg.' },
+    { year: '2024', label: 'Expanded', desc: 'New menu, bigger terrace' },
+    { year: 'Now',  label: 'Family', desc: '2K+ regulars & counting' },
+  ];
+
+  return (
+    <section ref={sectionRef} className="story-section theme-ember" style={{
+      background: 'var(--bg)',
+      padding: '120px 0',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Gradient blend from HouseFavourites (var(--bg-2)) into StorySection */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: '100px',
+        background: 'linear-gradient(to bottom, var(--bg-2) 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+
+
+
+      {/* Ambient glows — no filter:blur, radial-gradient alone is performant */}
+      <div style={{
+        position: 'absolute', left: '-200px', top: '20%',
+        width: '600px', height: '600px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgb(var(--accent-rgb) / 0.09) 0%, transparent 60%)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        position: 'absolute', right: '-180px', bottom: '10%',
+        width: '500px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgb(var(--accent-rgb) / 0.09) 0%, transparent 60%)',
+        pointerEvents: 'none',
+      }} />
+
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 clamp(24px, 6vw, 80px)', position: 'relative', zIndex: 1 }}>
+
+        {/* Oversize header */}
+        <div ref={headRef} style={{ marginBottom: '72px', opacity: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '24px' }}>
+            <div style={{ width: '36px', height: '1.5px', background: 'var(--accent)' }} />
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)' }}>Our Story</span>
+          </div>
+          <h2 className="story-headline" style={{
+            fontFamily: "var(--font-display)",
+            fontSize: 'clamp(3rem, 9vw, 8rem)',
+            fontWeight: 700, lineHeight: 0.92,
+            letterSpacing: '-0.04em', margin: 0,
+            color: 'var(--label-3)',
+          }}>
+            More Than<br />
+            <span style={{
+              WebkitTextStroke: '0px',
+              color: 'var(--label-strong)',
+            }}>A Meal.</span>
+          </h2>
+        </div>
+
+        {/* Two-column grid */}
+        <div className="story-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 'clamp(40px, 6vw, 80px)',
+          alignItems: 'start',
+          marginBottom: '80px',
+        }}>
+
+          {/* LEFT — full-bleed image with overlaid quote */}
+          <div ref={imgRef} style={{ position: 'relative', opacity: 0 }}>
+            <div className="story-img-wrap" style={{
+              borderRadius: '20px', overflow: 'hidden',
+              aspectRatio: '3/4',
+              boxShadow: '0 40px 120px rgba(0,0,0,0.21)',
+              position: 'relative',
+            }}>
+              <img
+                src="/images/chef.avif"
+                alt="Ohana dining"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              {/* Gradient scrim */}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.3) 50%, transparent 100%)' }} />
+              {/* Overlaid italic quote */}
+              <div style={{
+                position: 'absolute', bottom: '28px', left: '28px', right: '28px',
+              }}>
+                <p style={{
+                  fontFamily: 'var(--font-display)', fontStyle: 'normal',
+                  fontSize: 'clamp(1rem, 2.5vw, 1.3rem)',
+                  color: 'rgb(var(--fg-rgb) / 0.9)', lineHeight: 1.55, margin: '0 0 12px',
+                }}>
+                  "Ohana means family — and every plate we serve carries that warmth."
+                </p>
+                <span style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: '700' }}>
+                  — The Ohana Kitchen
+                </span>
+              </div>
+            </div>
+
+            {/* Accent stat badge */}
+            <div className="story-stat-badge" style={{
+              position: 'absolute', top: '24px', right: '-16px',
+              background: 'rgb(var(--accent-rgb) / 0.18)', border: '1px solid rgb(var(--accent-rgb) / 0.35)',
+              // No backdropFilter — solid background is GPU-free
+              borderRadius: '14px',
+              padding: '14px 20px', textAlign: 'center',
+            }}>
+              <p style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--accent)', margin: 0, lineHeight: 1, letterSpacing: '-0.03em' }}>{story.rating}<span style={{ fontSize: '1rem' }}>★</span></p>
+              <p style={{ fontSize: '9px', color: 'rgb(var(--fg-rgb) / 0.4)', margin: '5px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Rating</p>
+            </div>
+          </div>
+
+          {/* RIGHT — narrative + stats */}
+          <div ref={bodyRef} style={{ opacity: 0 }}>
+            <p style={{ fontSize: 'clamp(15px, 1.8vw, 18px)', color: 'rgb(var(--fg-rgb) / 0.65)', lineHeight: 1.85, margin: '0 0 20px' }}>
+              We opened Ohana above Gar-Ali with one belief: good food should feel like coming home. The terrace, the golden-hour glow, the menu — all of it built for long evenings and even longer conversations.
+            </p>
+            <p style={{ fontSize: 'clamp(14px, 1.5vw, 16px)', color: 'rgb(var(--fg-rgb) / 0.4)', lineHeight: 1.85, margin: '0 0 40px' }}>
+              From tropical breakfasts to late-night dinner plates, our kitchen blends global comfort flavours with local ingredients — served in a space that feels intimate and elevated.
+            </p>
+
+            {/* Stats row */}
+            <div className="story-stats-row" style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+              gap: '20px', marginBottom: '44px',
+              paddingTop: '32px',
+              borderTop: '1px solid rgb(var(--fg-rgb) / 0.07)',
+            }}>
+              {[
+                { num: story.guests, label: 'Guests' },
+                { num: `${story.rating}★`, label: 'Rating' },
+                { num: story.years, label: 'In Jorhat' },
+              ].map((s, i) => (
+                <div key={i}>
+                  <p style={{ fontSize: 'clamp(1.4rem, 3vw, 2rem)', fontWeight: 700, color: 'var(--label-strong)', margin: 0, letterSpacing: '-0.03em', fontFamily: "var(--font-display)" }}>{s.num}</p>
+                  <p style={{ fontSize: '10px', color: 'rgb(var(--fg-rgb) / 0.3)', margin: '5px 0 0', letterSpacing: '0.05em', textTransform: 'uppercase', fontWeight: '600' }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            <Link
+              to="/about"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '10px',
+                background: 'transparent',
+                border: '1px solid rgb(var(--accent-rgb) / 0.55)',
+                color: 'var(--accent)', textDecoration: 'none',
+                padding: '14px 30px', borderRadius: '100px',
+                fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent)'; e.currentTarget.style.color = 'var(--on-accent)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent)'; }}
+            >
+              Read Our Story <span style={{ fontSize: '16px' }}>→</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* Timeline pills */}
+        <div ref={pillsRef} className="story-pills" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: '16px', opacity: 0,
+          borderTop: '1px solid rgb(var(--fg-rgb) / 0.07)',
+          paddingTop: '52px',
+        }}>
+          {MILESTONES.map((m, i) => (
+            <div key={i} className="story-pill" style={{
+              background: 'rgb(var(--fg-rgb) / 0.03)',
+              border: '1px solid rgb(var(--fg-rgb) / 0.07)',
+              borderRadius: '16px', padding: '24px 22px',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              {/* Accent line top */}
+              <div style={{
+                position: 'absolute', top: 0, left: '22px',
+                width: '36px', height: '2px',
+                background: i % 2 === 0 ? 'var(--accent)' : 'var(--accent)',
+                borderRadius: '2px',
+              }} />
+              <p style={{ fontSize: '1.6rem', fontWeight: 700, color: i % 2 === 0 ? 'var(--accent)' : 'var(--accent)', margin: '8px 0 4px', letterSpacing: '-0.03em', fontFamily: "var(--font-display)" }}>{m.year}</p>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--label-strong)', margin: '0 0 4px', letterSpacing: '0.05em', textTransform: 'uppercase' }}>{m.label}</p>
+              <p style={{ fontSize: '12px', color: 'rgb(var(--fg-rgb) / 0.35)', margin: 0, lineHeight: 1.5 }}>{m.desc}</p>
+            </div>
+          ))}
+        </div>
+
+      </div>
+
+      <style>{`
+        @media (max-width: 700px) {
+          .story-section { padding: 80px 0 60px !important; }
+          .story-img-wrap { aspect-ratio: 4/3 !important; }
+          .story-stat-badge { display: none !important; }
+          .story-headline { font-size: clamp(2.2rem, 11vw, 3.5rem) !important; }
+          .story-grid { margin-bottom: 40px !important; }
+          .story-stats-row { margin-bottom: 28px !important; }
+          .story-pills { grid-template-columns: 1fr 1fr !important; gap: 10px !important; padding-top: 24px !important; border-top: none !important; }
+          .story-pill { padding: 16px 14px !important; }
+          .story-body-text { margin-bottom: 24px !important; }
+        }
+      `}</style>
+    </section>
+  );
+};
+
+
+// ─── TESTIMONIALS SECTION (redesigned — dual infinite marquee) ────
+// Reviews come from the content store (real Google reviews — editable
+// under /admin → Home Page → Guest reviews); defaults are bundled.
+
+function ReviewCard({ review, onMouseMove, onMouseLeave }) {
+  const cardRef = useRef(null);
+  const handleMouseMove = (e) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    cardRef.current.style.transform = `perspective(800px) rotateX(${-y * 14}deg) rotateY(${x * 14}deg) scale(1.04)`;
+    cardRef.current.style.boxShadow = `${-x * 20}px ${-y * 20}px 60px rgba(0,0,0,0.5), 0 0 40px rgb(var(--accent-rgb) / 0.08)`;
+  };
+  const handleMouseLeave = () => {
+    if (!cardRef.current) return;
+    cardRef.current.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)';
+    cardRef.current.style.boxShadow = '0 8px 32px rgba(0,0,0,0.35)';
+  };
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        flexShrink: 0,
+        width: 'clamp(280px, 36vw, 420px)',
+        background: 'rgb(var(--fg-rgb) / 0.03)',
+        border: '1px solid rgb(var(--fg-rgb) / 0.08)',
+        borderRadius: '20px',
+        padding: '28px 28px 24px',
+        position: 'relative',
+        cursor: 'default',
+        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+        willChange: 'transform',
+      }}
+    >
+      {/* Giant quote mark */}
+      <div style={{
+        position: 'absolute', top: '16px', left: '20px',
+        fontSize: '5rem', lineHeight: 1, fontFamily: 'var(--font-display)',
+        color: 'rgb(var(--accent-rgb) / 0.15)', fontWeight: 700,
+        pointerEvents: 'none', userSelect: 'none',
+      }}>"</div>
+
+      {/* Stars */}
+      <div style={{ display: 'flex', gap: '3px', marginBottom: '18px', paddingTop: '8px' }}>
+        {Array.from({ length: review.rating }).map((_, i) => (
+          <span key={i} style={{ color: 'var(--accent)', fontSize: '13px' }}>★</span>
+        ))}
+      </div>
+
+      {/* Quote */}
+      <p style={{
+        fontSize: '14px', lineHeight: 1.75,
+        color: 'rgb(var(--fg-rgb) / 0.8)',
+        margin: '0 0 20px',
+        fontStyle: 'normal',
+        fontFamily: 'var(--font-display)',
+      }}>"{review.quote}"</p>
+
+      {/* Divider */}
+      <div style={{ width: '100%', height: '1px', background: 'rgb(var(--fg-rgb) / 0.06)', marginBottom: '16px' }} />
+
+      {/* Author */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '32px', height: '32px', borderRadius: '50%',
+          background: `linear-gradient(135deg, var(--accent), var(--accent))`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '12px', fontWeight: 700, color: 'var(--label-strong)', flexShrink: 0,
+        }}>
+          {review.author[0]}
+        </div>
+        <div>
+          <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--label-strong)', margin: 0, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{review.author}</p>
+          <p style={{ fontSize: '10px', color: 'rgb(var(--fg-rgb) / 0.3)', margin: '2px 0 0', letterSpacing: '0.04em' }}>{review.visit}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TestimonialsSection = () => {
+  const sectionRef = useRef(null);
+  const headRef    = useRef(null);
+
+  const contentCtx = useContent();
+  const REVIEWS = (contentCtx && contentCtx.content && Array.isArray(contentCtx.content.reviews) && contentCtx.content.reviews.length)
+    ? contentCtx.content.reviews : defaultReviews;
+
+  // Double the array for seamless loop
+  const row1 = [...REVIEWS, ...REVIEWS];
+  const half = Math.floor(REVIEWS.length / 2);
+  const shifted = [...REVIEWS.slice(half), ...REVIEWS.slice(0, half)];
+  const row2 = [...shifted, ...shifted];
+
+  const row1Ref = useRef(null);
+  const row2Ref = useRef(null);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const ctx = gsap.context(() => {
+      gsap.set(headRef.current, { opacity: 0, y: 40 });
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'top 80%',
+        once: true,
+        onEnter: () => gsap.to(headRef.current, { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out' }),
+      });
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <section ref={sectionRef} className="theme-dark ts-section" style={{
+      background: 'var(--bg)',
+      position: 'relative',
+      overflow: 'hidden',
+    }}>
+      {/* Gradient blend from StorySection */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        height: '100px',
+        background: 'linear-gradient(to bottom, var(--bg) 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 2,
+      }} />
+
+      {/* Ambient glow */}
+      <div className="oh4-bg-glow" style={{
+        position: 'absolute', left: '50%', top: '40%', transform: 'translate(-50%,-50%)',
+        width: '800px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgb(var(--accent-rgb) / 0.06) 0%, transparent 65%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Header */}
+      <div ref={headRef} style={{ textAlign: 'center', padding: '0 clamp(24px,6vw,80px)', marginBottom: '72px', opacity: 0, position: 'relative', zIndex: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '24px' }}>
+          <div style={{ width: '36px', height: '1.5px', background: 'rgb(var(--accent-rgb) / 0.6)' }} />
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)' }}>Guest Reviews</span>
+          <div style={{ width: '36px', height: '1.5px', background: 'rgb(var(--accent-rgb) / 0.6)' }} />
+        </div>
+
+        <h2 style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 'clamp(2.8rem, 8vw, 7rem)',
+          fontWeight: 700, lineHeight: 0.92,
+          letterSpacing: '-0.04em', margin: '0 0 24px',
+        }}>
+          <span style={{ color: 'var(--label-3)', }}>Regulars</span>{' '}
+          <span style={{ color: 'var(--label-strong)' }}>Say</span><br />
+          <span style={{ color: 'var(--label-strong)' }}>It Best.</span>
+        </h2>
+
+        <div style={{ display: 'flex', gap: '4px', justifyContent: 'center', marginBottom: '8px' }}>
+          {[1,2,3,4,5].map(i => <span key={i} style={{ color: 'var(--accent)', fontSize: '18px' }}>★</span>)}
+        </div>
+        <p style={{ fontSize: '11px', color: 'rgb(var(--fg-rgb) / 0.25)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
+          4.8 out of 5 · 200+ verified visits
+        </p>
+      </div>
+
+      {/* MARQUEE ROWS */}
+      <div style={{ position: 'relative', zIndex: 3 }}>
+
+        {/* Edge fade masks */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 4, pointerEvents: 'none',
+          background: 'linear-gradient(to right, var(--bg) 0%, transparent 8%, transparent 92%, var(--bg) 100%)',
+        }} />
+
+        {/* Row 1 — scrolls left */}
+        <div 
+          ref={row1Ref}
+          className="reviews-scroll-container"
+          style={{ marginBottom: '20px' }}
+          onMouseDown={(e) => {
+            const el = row1Ref.current;
+            if (!el) return;
+            el.isDown = true;
+            el.startX = e.pageX - el.offsetLeft;
+            el.scrollLeftVal = el.scrollLeft;
+          }}
+          onMouseLeave={() => {
+            if (row1Ref.current) row1Ref.current.isDown = false;
+          }}
+          onMouseUp={() => {
+            if (row1Ref.current) row1Ref.current.isDown = false;
+          }}
+          onMouseMove={(e) => {
+            const el = row1Ref.current;
+            if (!el || !el.isDown) return;
+            e.preventDefault();
+            const x = e.pageX - el.offsetLeft;
+            const walk = (x - el.startX) * 1.5;
+            el.scrollLeft = el.scrollLeftVal - walk;
+          }}
+        >
+          <div className="tr-row tr-left" style={{
+            display: 'flex', gap: '20px', width: 'max-content',
+            animation: 'tr-scroll-left 40s linear infinite',
+          }}>
+            {row1.map((r, i) => <ReviewCard key={i} review={r} />)}
+          </div>
+        </div>
+
+        {/* Row 2 — scrolls right */}
+        <div 
+          ref={row2Ref}
+          className="reviews-scroll-container"
+          onMouseDown={(e) => {
+            const el = row2Ref.current;
+            if (!el) return;
+            el.isDown = true;
+            el.startX = e.pageX - el.offsetLeft;
+            el.scrollLeftVal = el.scrollLeft;
+          }}
+          onMouseLeave={() => {
+            if (row2Ref.current) row2Ref.current.isDown = false;
+          }}
+          onMouseUp={() => {
+            if (row2Ref.current) row2Ref.current.isDown = false;
+          }}
+          onMouseMove={(e) => {
+            const el = row2Ref.current;
+            if (!el || !el.isDown) return;
+            e.preventDefault();
+            const x = e.pageX - el.offsetLeft;
+            const walk = (x - el.startX) * 1.5;
+            el.scrollLeft = el.scrollLeftVal - walk;
+          }}
+        >
+          <div className="tr-row tr-right" style={{
+            display: 'flex', gap: '20px', width: 'max-content',
+            animation: 'tr-scroll-right 48s linear infinite',
+          }}>
+            {row2.map((r, i) => <ReviewCard key={i} review={r} />)}
+          </div>
+        </div>
+      </div>
+
+
+
+      <style>{`
+        .ts-section { padding: 120px 0; }
+
+        .reviews-scroll-container {
+          overflow-x: auto;
+          overflow-y: hidden;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none;  /* IE and Edge */
+          cursor: grab;
+          user-select: none;
+        }
+        .reviews-scroll-container::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
+        .reviews-scroll-container:active {
+          cursor: grabbing;
+        }
+
+        @keyframes tr-scroll-left {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes tr-scroll-right {
+          0%   { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
+        }
+        .reviews-scroll-container:hover .tr-row { animation-play-state: paused !important; }
+
+        @media (max-width: 700px) {
+          .ts-section { padding: 60px 0 32px 0; }
+          .tr-left  { animation-duration: 28s !important; }
+          .tr-right { animation-duration: 34s !important; }
+        }
+      `}</style>
+    </section>
+  );
+};
+
+// ─── CONTACT FINALE SECTION ──────────────────────────────────────
+const ContactSection = () => {
+  const sectionRef = useRef(null);
+
+  useEffect(() => {
+    if (!sectionRef.current) return;
+    const ctx = gsap.context(() => {
+      const els = sectionRef.current.querySelectorAll('.cs-reveal');
+      gsap.set(els, { opacity: 0, y: 50 });
+      ScrollTrigger.create({
+        trigger: sectionRef.current,
+        start: 'top 80%',
+        once: true,
+        onEnter: () => gsap.to(els, { opacity: 1, y: 0, duration: 1.1, ease: 'expo.out', stagger: 0.1 }),
+      });
+    }, sectionRef);
+    return () => ctx.revert();
+  }, []);
+
+  const INFO = [
+    {
+      icon: '📍',
+      label: 'Find Us',
+      value: 'Above KFC, Gar-Ali',
+      sub: 'Jorhat, Assam',
+      href: 'https://maps.google.com',
+      cta: 'Open in Maps →',
+      accent: 'var(--accent)',
+    },
+    {
+      icon: '🕐',
+      label: 'Hours',
+      value: '11 AM – 10 PM',
+      sub: 'Monday to Sunday',
+      href: null,
+      cta: 'Always open for you',
+      accent: 'var(--accent)',
+    },
+    {
+      icon: '📲',
+      label: 'Call or WhatsApp',
+      value: 'Tap to Connect',
+      sub: 'Fast replies guaranteed',
+      href: 'tel:+91',
+      cta: 'Message Us →',
+      accent: 'var(--accent)',
+    },
+  ];
+
+  return (
+    <section className="theme-gold" ref={sectionRef} style={{
+      position: 'relative',
+      background: 'var(--bg)',
+      overflow: 'hidden',
+      padding: '0 0 0 0',
+    }}>
+
+      {/* Gradient blend from OhanaExperience (var(--bg)) */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '120px',
+        background: 'linear-gradient(to bottom, var(--bg) 0%, transparent 100%)',
+        pointerEvents: 'none', zIndex: 5,
+      }} />
+
+      {/* Ambient glows */}
+      <div className="oh4-bg-glow" style={{
+        position: 'absolute', top: '-200px', left: '50%', transform: 'translateX(-50%)',
+        width: '900px', height: '600px', borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgb(var(--accent-rgb) / 0.07) 0%, transparent 65%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
+      <div className="oh4-bg-glow" style={{
+        position: 'absolute', bottom: '-100px', right: '-200px',
+        width: '700px', height: '500px', borderRadius: '50%',
+        background: 'radial-gradient(ellipse, rgb(var(--accent-rgb) / 0.06) 0%, transparent 65%)',
+        pointerEvents: 'none', zIndex: 0,
+      }} />
+
+      {/* ── CINEMATIC CTA HERO ── */}
+      <div className="cs-hero-wrap" style={{
+        position: 'relative', zIndex: 2,
+        textAlign: 'center',
+        borderBottom: '1px solid rgb(var(--fg-rgb) / 0.05)',
+      }}>
+        <div className="cs-reveal" style={{ opacity: 0, marginBottom: '28px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '40px', height: '1.5px', background: 'var(--accent)' }} />
+            <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--accent)' }}>
+              Come Visit
+            </span>
+            <div style={{ width: '40px', height: '1.5px', background: 'var(--accent)' }} />
+          </div>
+        </div>
+
+        <h2 className="cs-reveal" style={{
+          opacity: 0,
+          fontFamily: "var(--font-display)",
+          fontSize: 'clamp(3rem, 11vw, 10rem)',
+          fontWeight: 700, lineHeight: 0.88,
+          letterSpacing: '-0.04em', margin: '0 0 32px',
+        }}>
+          <span style={{ color: 'var(--label-3)', }}>Let's</span>{' '}
+          <span style={{ color: 'var(--label-strong)' }}>Meet</span><br />
+          <span style={{ color: 'var(--label-strong)' }}>Over</span>{' '}
+          <span style={{
+            color: 'var(--label-3)',
+            fontStyle: 'normal', fontWeight: '400',
+            fontFamily: 'var(--font-display)',
+            fontSize: '0.75em', letterSpacing: '-0.01em',
+          }}>good food.</span>
+        </h2>
+
+        <p className="cs-reveal" style={{
+          opacity: 0,
+          fontSize: 'clamp(14px, 1.6vw, 18px)',
+          color: 'rgb(var(--fg-rgb) / 0.38)',
+          lineHeight: 1.75, margin: '0 auto 52px',
+          maxWidth: '480px',
+        }}>
+          We're open every day. Swing by the terrace above Gar-Ali and let the food do the talking.
+        </p>
+
+        <div className="cs-reveal" style={{ opacity: 0, display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            to="/reservations"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: 'var(--accent)', color: 'var(--on-accent)', textDecoration: 'none',
+              padding: '16px 36px', borderRadius: '100px',
+              fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              transition: 'all 0.3s ease',
+              boxShadow: '0 12px 40px rgb(var(--accent-rgb) / 0.35)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 20px 60px rgb(var(--accent-rgb) / 0.45)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 12px 40px rgb(var(--accent-rgb) / 0.35)'; }}
+          >
+            Reserve a Table
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '22px', height: '22px', borderRadius: '50%', background: 'rgba(0,0,0,0.15)', fontSize: '12px' }}>→</span>
+          </Link>
+          <Link
+            to="/contact"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '10px',
+              background: 'transparent',
+              border: '1px solid rgb(var(--fg-rgb) / 0.2)',
+              color: 'rgb(var(--fg-rgb) / 0.7)', textDecoration: 'none',
+              padding: '16px 36px', borderRadius: '100px',
+              fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase',
+              transition: 'all 0.3s ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgb(var(--fg-rgb) / 0.5)'; e.currentTarget.style.color = 'var(--label-strong)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgb(var(--fg-rgb) / 0.2)'; e.currentTarget.style.color = 'rgb(var(--fg-rgb) / 0.7)'; }}
+          >
+            Get Full Details
+          </Link>
+        </div>
+      </div>
+
+      {/* ── INFO STRIP ── */}
+      <div className="cs-info-grid" style={{
+        position: 'relative', zIndex: 2,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+      }}>
+        {INFO.map((info, i) => (
+          <div
+            key={i}
+            className="cs-reveal cs-info-card"
+            style={{
+              opacity: 0,
+              padding: 'clamp(36px,5vh,56px) clamp(24px,5vw,60px)',
+              borderRight: i < 2 ? '1px solid rgb(var(--fg-rgb) / 0.05)' : 'none',
+              borderTop: '1px solid rgb(var(--fg-rgb) / 0.05)',
+              cursor: info.href ? 'pointer' : 'default',
+              transition: 'background 0.3s ease',
+              position: 'relative', overflow: 'hidden',
+            }}
+            onClick={() => info.href && window.open(info.href, '_blank')}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgb(var(--fg-rgb) / 0.025)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            {/* Accent top bar */}
+            <div style={{
+              position: 'absolute', top: 0, left: 'clamp(24px,5vw,60px)',
+              width: '32px', height: '2px',
+              background: info.accent, borderRadius: '2px',
+            }} />
+
+            <p style={{
+              fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: info.accent,
+              margin: '0 0 16px',
+            }}>{info.label}</p>
+
+            <p style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 'clamp(1.2rem, 2.5vw, 1.9rem)',
+              fontWeight: 700, color: 'var(--label-strong)',
+              letterSpacing: '-0.02em', margin: '0 0 4px', lineHeight: 1.1,
+            }}>{info.value}</p>
+
+            <p style={{
+              fontSize: '13px', color: 'rgb(var(--fg-rgb) / 0.35)',
+              margin: '0 0 24px', lineHeight: 1.5,
+            }}>{info.sub}</p>
+
+            <span style={{
+              fontSize: '10px', fontWeight: '700',
+              color: info.href ? info.accent : 'rgb(var(--fg-rgb) / 0.2)',
+              letterSpacing: '0.05em',
+            }}>{info.cta}</span>
+          </div>
+        ))}
+      </div>
+      {/* ── BOTTOM MARK ── */}
+      <div style={{
+        position: 'relative', zIndex: 2,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: 'clamp(24px,4vh,40px) clamp(24px,8vw,100px)',
+        borderTop: '1px solid rgb(var(--fg-rgb) / 0.04)',
+        flexWrap: 'wrap', gap: '16px',
+      }}>
+        <p style={{ fontSize: '11px', color: 'rgb(var(--fg-rgb) / 0.15)', margin: 0, letterSpacing: '0.05em' }}>
+          © {new Date().getFullYear()} Ohana Kitchen & Café · Jorhat, Assam
+        </p>
+        <div style={{ display: 'flex', gap: '24px' }}>
+          {['Menu', 'Gallery', 'About', 'Contact'].map(l => (
+            <Link
+              key={l}
+              to={`/${l.toLowerCase()}`}
+              style={{
+                fontSize: '10px', fontWeight: '700', letterSpacing: '0.05em',
+                textTransform: 'uppercase', color: 'rgb(var(--fg-rgb) / 0.2)',
+                textDecoration: 'none', transition: 'color 0.2s ease',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'rgb(var(--fg-rgb) / 0.7)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgb(var(--fg-rgb) / 0.2)'; }}
+            >
+              {l}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+
+      <style>{`
+        .cs-hero-wrap { padding: clamp(120px,16vh,180px) clamp(24px,8vw,100px) clamp(80px,10vh,120px); }
+
+        @media (max-width: 700px) {
+          .cs-hero-wrap { padding: 48px 20px 60px 20px; }
+          .cs-info-grid {
+            grid-template-columns: 1fr 1fr !important;
+          }
+          .cs-info-card {
+            padding: 28px 16px !important;
+            border-bottom: 1px solid rgb(var(--fg-rgb) / 0.05) !important;
+            text-align: center !important;
+          }
+          /* Center the accent bar for all cards */
+          .cs-info-card > div:first-child {
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+          }
+          .cs-info-card:nth-child(1) {
+            border-right: 1px solid rgb(var(--fg-rgb) / 0.05) !important;
+          }
+          .cs-info-card:nth-child(2) {
+            border-right: none !important;
+          }
+          .cs-info-card:nth-child(3) {
+            grid-column: 1 / -1;
+            border-right: none !important;
+          }
+          .cs-info-card p:nth-of-type(3) {
+            margin-bottom: 12px !important;
+          }
+        }
+      `}</style>
+    </section>
+  );
+};
+
+// ─── SECTION BRIDGE — dark-to-light transition strip ─────────────
+// Bridge removed — StorySection is now dark, no light transition needed
+
+// ─── HOME ────────────────────────────────────────────────────────
+const Home = () => {
+  return (
+    <main className="theme-dark home-stage relative overflow-hidden">
+      {/* 1. Hero — above-the-fold statement */}
+      <HeroSection />
+
+      {/* Thin teal rule to close the hero */}
+      <div style={{ width: '100%', height: '1px', background: 'var(--bg-3)', display: 'block' }} />
+
+      {/* 2. Palate Showcase — quick category browse */}
+      <PalateShowcase />
+
+      {/* 3. House Favourites — the cinematic dish spotlight (dark section) */}
+      <HouseFavourites />
+
+      {/* 4. Smooth gradient bridge from dark → cream */}
+      {/* 5. Our Story — brand narrative */}
+      <StorySection />
+
+      {/* 6. Testimonials — social proof on near-black */}
+      <TestimonialsSection />
+
+      {/* 7. Ohana Experience — atmosphere / vibe section */}
+      <OhanaExperience />
+
+      {/* 8. Contact + Info finale */}
+      <ContactSection />
+    </main>
+  );
+};
+
+export default Home;

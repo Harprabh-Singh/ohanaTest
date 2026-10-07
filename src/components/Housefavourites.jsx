@@ -1,0 +1,828 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { DISHES as DEFAULT_DISHES } from '../data/houseFavourites';
+import { useContent } from '../content/ContentContext';
+
+gsap.registerPlugin(ScrollTrigger);
+
+/* ─────────────────── ANIMATED PRICE ─────────────────── */
+function PriceCounter({ value, color }) {
+  const ref = useRef(null);
+  const prev = useRef(value);
+  useEffect(() => {
+    if (!ref.current || prev.current === value) { prev.current = value; return; }
+    const start = prev.current, end = value, dur = 420, t0 = performance.now();
+    const tick = now => {
+      const p = Math.min((now - t0) / dur, 1);
+      const e = p < .5 ? 2 * p * p : -1 + (4 - 2 * p) * p;
+      if (ref.current) ref.current.textContent = '₹' + Math.round(start + (end - start) * e);
+      if (p < 1) requestAnimationFrame(tick);
+      else { if (ref.current) ref.current.textContent = '₹' + end; prev.current = end; }
+    };
+    requestAnimationFrame(tick);
+    prev.current = value;
+  }, [value]);
+  return <span ref={ref} style={{ color }}>₹{value}</span>;
+}
+
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1], 16)},${parseInt(r[2], 16)},${parseInt(r[3], 16)}` : '180,145,46';
+}
+
+/* ─────────────────── MAIN ─────────────────── */
+export default function HouseFavourites() {
+  const [active, setActive] = useState(0);
+  const navigate = useNavigate();
+
+  const wrapRef        = useRef(null);
+  const stickyRef      = useRef(null);
+  const imgRef         = useRef(null);
+  const bgWordRef      = useRef(null);
+  const taglineRef     = useRef(null);
+  const subRef         = useRef(null);
+  const priceValRef    = useRef(null);
+  const mobilePriceRef = useRef(null);
+  const indexRef       = useRef(null);
+  const tagRef         = useRef(null);
+  const nameRef        = useRef(null);
+  const ctaRef         = useRef(null);
+  const progressRef    = useRef(null);
+  const rafRef         = useRef(null);
+  const mouseRef       = useRef({ tx: 0, ty: 0, cx: 0, cy: 0 });
+  const activeRef      = useRef(0);
+  const isMobileRef    = useRef(false);
+  const hasEnteredRef  = useRef(false);
+  const tlRef          = useRef(null);
+  // For debounced scroll snap on mobile
+  const snapTimerRef   = useRef(null);
+  const lastProgressRef= useRef(0);
+  const touchStartRef  = useRef(null);
+  const touchDeltaRef  = useRef(0);
+
+  /* Content store: admin-editable dishes, bundled defaults as fallback */
+  const ctx = useContent();
+  const dishes = (ctx && Array.isArray(ctx.content?.houseFavs) && ctx.content.houseFavs.length)
+    ? ctx.content.houseFavs
+    : DEFAULT_DISHES;
+  const TOTAL = dishes.length;
+  const dishesRef = useRef(dishes); dishesRef.current = dishes;
+  const totalRef = useRef(TOTAL); totalRef.current = TOTAL;
+
+  const d = dishes[active] || dishes[0] || DEFAULT_DISHES[0];
+
+  /* Clamp the active index if the dish list shrank (admin removed dishes) */
+  useEffect(() => {
+    if (activeRef.current > TOTAL - 1) {
+      activeRef.current = 0;
+      setActive(0);
+    }
+  }, [TOTAL]);
+
+  useEffect(() => {
+    dishes.forEach(dish => { if (dish.image) { const i = new window.Image(); i.src = dish.image; } });
+    isMobileRef.current = window.innerWidth < 768;
+  }, [dishes]);
+
+  useEffect(() => {
+    const onResize = () => { isMobileRef.current = window.innerWidth < 768; };
+    window.addEventListener('resize', onResize, { passive: true });
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  /* ─────── DISH TRANSITION (no out-animation, clean in) ─────── */
+  const triggerDishTransition = useCallback((idx) => {
+    if (idx === activeRef.current) return;
+    activeRef.current = idx;
+
+    const dish = dishesRef.current[idx];
+    if (!dish) return;
+    const isMobile = isMobileRef.current;
+    const priceEl = isMobile ? mobilePriceRef.current : priceValRef.current;
+
+    const allTextEls = [
+      nameRef.current, tagRef.current, taglineRef.current,
+      subRef.current, ctaRef.current,
+    ].filter(Boolean);
+
+    // Kill any running animation immediately
+    if (tlRef.current) tlRef.current.kill();
+
+    const tl = gsap.timeline();
+    tlRef.current = tl;
+
+    // Instantly zero everything — no out animation
+    tl.set([imgRef.current, bgWordRef.current, ...allTextEls, priceEl].filter(Boolean), { opacity: 0 });
+    tl.set([...allTextEls, priceEl].filter(Boolean), { y: 16 });
+    tl.set(bgWordRef.current, { x: isMobile ? 0 : 20 });
+
+    // Swap React state at time 0
+    tl.call(() => { setActive(idx); }, [], 0);
+
+    // Small pause for React to re-render (image src swap)
+    tl.set({}, {}, '+=0.055');
+
+    // Set image start state
+    tl.set(imgRef.current, {
+      x: isMobile ? 0 : (dish.imgPos === 'right' ? '28px' : '-28px'),
+      y: isMobile ? '14px' : '0px',
+      scale: 0.97,
+      // No filter:blur — use scale+opacity instead (GPU-only)
+    });
+
+    // Image in
+    tl.to(imgRef.current, {
+      opacity: 1, x: 0, y: 0, scale: 1,
+      duration: 0.82, ease: 'expo.out',
+    });
+
+    // Text cascade in
+    tl.to(bgWordRef.current,  { opacity: 1, x: 0, duration: 0.78, ease: 'expo.out' }, '<0.04');
+    tl.to(nameRef.current,    { opacity: 1, y: 0, duration: 0.68, ease: 'expo.out' }, '<0.06');
+    tl.to(tagRef.current,     { opacity: 1, y: 0, duration: 0.52, ease: 'expo.out' }, '<0.04');
+    tl.to(taglineRef.current, { opacity: 1, y: 0, duration: 0.60, ease: 'expo.out' }, '<0.04');
+    tl.to(subRef.current,     { opacity: 1, y: 0, duration: 0.52, ease: 'expo.out' }, '<0.04');
+    tl.to(priceEl,            { opacity: 1, y: 0, duration: 0.58, ease: 'expo.out' }, '<0.05');
+    tl.to(ctaRef.current,     { opacity: 1, y: 0, duration: 0.52, ease: 'expo.out' }, '<0.04');
+  }, []);
+
+  /* ─────── SCROLL TRIGGER (desktop only) ─────── */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    const sticky = stickyRef.current;
+    if (!wrap || !sticky) return;
+
+    // MOBILE: just normal flow — 100vh, no pin, no scroll animation
+    if (isMobileRef.current) {
+      wrap.style.height = '100vh';
+      sticky.style.position = 'relative';
+      sticky.style.top = 'auto';
+      return; // no ScrollTrigger on mobile
+    }
+
+    // DESKTOP: sticky scroll pin across TOTAL viewports
+    wrap.style.height = `${totalRef.current * 100}vh`;
+
+    const resolveSnap = (progress) => {
+      const inner = Math.max(0, Math.min(1, (progress - 0.03) / 0.94));
+      return Math.max(0, Math.min(totalRef.current - 1, Math.round(inner * (totalRef.current - 1))));
+    };
+
+    const st = ScrollTrigger.create({
+      trigger: wrap,
+      start: 'top top',
+      end: 'bottom bottom',
+      pin: sticky,
+      pinSpacing: false,
+      anticipatePin: 1,
+      onUpdate: self => {
+        const p = self.progress;
+        lastProgressRef.current = p;
+        if (progressRef.current) {
+          progressRef.current.style.transform = `scaleX(${p})`;
+        }
+        const snap = resolveSnap(p);
+        triggerDishTransition(snap);
+      },
+    });
+
+    return () => {
+      st.kill();
+      clearTimeout(snapTimerRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [TOTAL]);
+
+  /* ─────── MOBILE SWIPE / TAP NAVIGATION ─────── */
+  useEffect(() => {
+    if (!isMobileRef.current) return;
+    const el = stickyRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e) => {
+      touchStartRef.current = e.touches[0].clientX;
+      touchDeltaRef.current = 0;
+    };
+    const onTouchMove = (e) => {
+      if (touchStartRef.current === null) return;
+      touchDeltaRef.current = e.touches[0].clientX - touchStartRef.current;
+    };
+    const onTouchEnd = () => {
+      const delta = touchDeltaRef.current;
+      if (Math.abs(delta) > 40) {
+        const next = delta < 0
+          ? Math.min(activeRef.current + 1, totalRef.current - 1)
+          : Math.max(activeRef.current - 1, 0);
+        triggerDishTransition(next);
+        // Update progress bar
+        if (progressRef.current) {
+          progressRef.current.style.transform = `scaleX(${next / (totalRef.current - 1)})`;
+        }
+      }
+      touchStartRef.current = null;
+      touchDeltaRef.current = 0;
+    };
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true });
+    el.addEventListener('touchmove',  onTouchMove,  { passive: true });
+    el.addEventListener('touchend',   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart);
+      el.removeEventListener('touchmove',  onTouchMove);
+      el.removeEventListener('touchend',   onTouchEnd);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /* ─────── ENTRANCE ANIMATION ─────── */
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (!wrap) return;
+
+    const allEls = [
+      bgWordRef.current, imgRef.current, taglineRef.current,
+      subRef.current, priceValRef.current, mobilePriceRef.current,
+      indexRef.current, tagRef.current, nameRef.current, ctaRef.current,
+    ].filter(Boolean);
+
+    gsap.set(allEls, { opacity: 0 });
+    gsap.set([nameRef.current, tagRef.current, taglineRef.current,
+              subRef.current, ctaRef.current, mobilePriceRef.current], { y: 24 });
+    gsap.set(imgRef.current, { y: 16, scale: 0.97 }); // No filter:blur — GPU-only props only
+    gsap.set(bgWordRef.current, { x: 26 });
+
+    const ctx = gsap.context(() => {
+      ScrollTrigger.create({
+        trigger: wrap,
+        start: 'top 85%',
+        once: true,
+        onEnter: () => {
+          if (hasEnteredRef.current) return;
+          hasEnteredRef.current = true;
+          const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+          tl.to(bgWordRef.current,      { opacity: 1, x: 0, duration: 1.3 }, 0)
+            .to(imgRef.current,         { opacity: 1, y: 0, scale: 1, duration: 1.05 }, 0.08)
+            .to(nameRef.current,        { opacity: 1, y: 0, duration: 0.88 }, 0.16)
+            .to(tagRef.current,         { opacity: 1, y: 0, duration: 0.68 }, 0.24)
+            .to(taglineRef.current,     { opacity: 1, y: 0, duration: 0.78 }, 0.30)
+            .to(subRef.current,         { opacity: 1, y: 0, duration: 0.68 }, 0.38)
+            .to(priceValRef.current,    { opacity: 1, y: 0, duration: 0.78 }, 0.44)
+            .to(mobilePriceRef.current, { opacity: 1, y: 0, duration: 0.78 }, 0.44)
+            .to(indexRef.current,       { opacity: 1, duration: 0.58 }, 0.52)
+            .to(ctaRef.current,         { opacity: 1, y: 0, duration: 0.68 }, 0.56);
+        },
+      });
+    }, wrap);
+
+    return () => ctx.revert();
+  }, []);
+
+  /* ─────── RESET y AFTER ACTIVE FLIP ─────── */
+  useEffect(() => {
+    const els = [
+      taglineRef.current, subRef.current, ctaRef.current,
+      tagRef.current, nameRef.current, priceValRef.current, mobilePriceRef.current,
+    ];
+    gsap.set(els.filter(Boolean), { y: 16 });
+  }, [active]);
+
+  /* ─────── MOUSE PARALLAX (desktop only) ─────── */
+  useEffect(() => {
+    // Disable completely on mobile to prevent empty rAF drain
+    if (window.innerWidth <= 768 || window.matchMedia('(pointer: coarse)').matches) {
+      return undefined;
+    }
+    
+    const sticky = stickyRef.current;
+    if (!sticky) return;
+    const LERP = 0.055;
+
+    const onMove = e => {
+      const r = sticky.getBoundingClientRect();
+      mouseRef.current.tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+      mouseRef.current.ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    };
+    const onLeave = () => { mouseRef.current.tx = 0; mouseRef.current.ty = 0; };
+    sticky.addEventListener('mousemove', onMove, { passive: true });
+    sticky.addEventListener('mouseleave', onLeave, { passive: true });
+
+    const tick = () => {
+      const m = mouseRef.current;
+      m.cx += (m.tx - m.cx) * LERP;
+      m.cy += (m.ty - m.cy) * LERP;
+      if (imgRef.current) {
+        imgRef.current.style.transform =
+          `perspective(1800px) rotateX(${-m.cy * 5}deg) rotateY(${m.cx * 8}deg) translateX(${m.cx * 10}px) translateY(${m.cy * 6}px)`;
+      }
+      if (bgWordRef.current) {
+        bgWordRef.current.style.transform =
+          `translateX(${m.cx * -18}px) translateY(${m.cy * -8}px)`;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      sticky.removeEventListener('mousemove', onMove);
+      sticky.removeEventListener('mouseleave', onLeave);
+    };
+  }, []);
+
+  const isRight = d.imgPos === 'right';
+
+  return (
+    <div ref={wrapRef} className="theme-dark" style={{ position: 'relative', zIndex: 0 }}>
+
+      {/* STICKY CANVAS — z-index 0 so next sections scroll on top */}
+      <div ref={stickyRef} style={{
+        position: 'sticky',
+        top: 0,
+        height: '100vh',
+        width: '100%',
+        overflow: 'hidden',
+        zIndex: 0,
+        background: 'linear-gradient(160deg, var(--bg-2) 0%, #010A07 60%, #02100D 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+
+        {/* Gradient blend: PalateShowcase (var(--bg)) → HouseFavourites (var(--bg-2)) */}
+        <div style={{
+          position: 'absolute',
+          top: 0, left: 0, right: 0,
+          height: '100px',
+          background: 'linear-gradient(to bottom, var(--bg) 0%, transparent 100%)',
+          pointerEvents: 'none',
+          zIndex: 20,
+        }} />
+
+        {/* PROGRESS BAR */}
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0,
+          height: '2px', background: 'rgb(var(--fg-rgb) / 0.04)', zIndex: 15,
+        }}>
+          <div ref={progressRef} style={{
+            height: '100%',
+            background: `linear-gradient(90deg, var(--accent), ${d.accent})`,
+            transform: 'scaleX(0)',
+            transformOrigin: 'left',
+            willChange: 'transform',
+            transition: 'background 0.6s ease',
+          }} />
+        </div>
+
+        {/* AMBIENT GLOW — no filter:blur, use gradient background directly */}
+        <div style={{
+          position: 'absolute', left: '50%', top: '30%',
+          width: 'min(80vw, 600px)', height: 'min(80vw, 600px)',
+          transform: 'translateX(-50%)', borderRadius: '50%',
+          background: `radial-gradient(ellipse, rgba(${hexToRgb(d.accent)},0.1) 0%, transparent 65%)`,
+          pointerEvents: 'none', zIndex: 1,
+          transition: 'background 1s ease',
+        }} />
+
+        {/* BG WORD */}
+        <div ref={bgWordRef} aria-hidden style={{
+          position: 'absolute', bottom: 0, left: '50%',
+          transform: 'translateX(-50%)',
+          fontSize: 'clamp(5rem, 22vw, 18rem)', fontWeight: 700,
+          fontFamily: "var(--font-display)",
+          color: 'rgb(var(--fg-rgb) / 0.07)',
+          letterSpacing: '-0.04em', lineHeight: 0.85,
+          userSelect: 'none', pointerEvents: 'none', zIndex: 2,
+          whiteSpace: 'nowrap', willChange: 'transform, opacity', opacity: 0,
+        }}>{d.short}</div>
+
+        {/* SECTION LABEL */}
+        <div style={{
+          position: 'absolute', top: '20px', left: 'clamp(20px, 5vw, 72px)',
+          zIndex: 10, display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <div style={{ width: '24px', height: '1px', background: 'var(--accent)' }} />
+          <span style={{
+            fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'var(--accent)',
+          }}>House Favourites</span>
+        </div>
+
+        {/* VERTICAL INDEX — desktop */}
+        <div ref={indexRef} className="hf-desktop-only" style={{
+          position: 'absolute', left: '20px', top: '50%',
+          transform: 'translateY(-50%) rotate(-90deg)',
+          transformOrigin: 'center center', zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: '10px', opacity: 0,
+        }}>
+          <span style={{
+            fontSize: '10px', fontWeight: '700', letterSpacing: '0.08em',
+            color: 'rgb(var(--fg-rgb) / 0.2)', textTransform: 'uppercase', whiteSpace: 'nowrap',
+          }}>{String(active + 1).padStart(2, '0')} / {String(TOTAL).padStart(2, '0')}</span>
+          <div style={{
+            width: '36px', height: '1px',
+            background: 'linear-gradient(90deg, rgb(var(--fg-rgb) / 0.08), rgb(var(--fg-rgb) / 0.25))',
+          }} />
+        </div>
+
+        {/* MAIN STAGE */}
+        <div className="hf-stage" style={{ position: 'relative', zIndex: 5, flex: 1, overflow: 'hidden' }}>
+
+          {/* IMAGE */}
+          <div className="hf-img-wrap" style={{ flexShrink: 0, position: 'relative', zIndex: 5 }}>
+            <div style={{ position: 'relative' }}>
+              <img
+                ref={imgRef}
+                src={d.image}
+                alt={d.name}
+                draggable={false}
+                onError={e => { e.target.src = '/images/spread.avif'; }}
+                style={{
+                  display: 'block', width: '100%', objectFit: 'cover', borderRadius: '8px',
+                  // No filter — use a semi-transparent overlay div instead
+                  WebkitMaskImage: 'linear-gradient(to bottom, black 65%, rgba(0,0,0,0.5) 88%, transparent 100%)',
+                  maskImage: 'linear-gradient(to bottom, black 65%, rgba(0,0,0,0.5) 88%, transparent 100%)',
+                  userSelect: 'none', opacity: 0,
+                  boxShadow: `0 0 0 1px rgb(var(--fg-rgb) / 0.04), 0 32px 100px rgba(0,0,0,0.22), 0 0 60px ${d.accent}1A`,
+                  transition: 'box-shadow 0.9s ease',
+                  willChange: 'transform, opacity',
+                }}
+              />
+              <div style={{
+                position: 'absolute', inset: 0, borderRadius: '8px', pointerEvents: 'none', zIndex: 2,
+                background: 'linear-gradient(135deg, rgb(var(--fg-rgb) / 0.07) 0%, transparent 50%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)',
+                maskImage: 'linear-gradient(to bottom, black 65%, transparent 100%)',
+              }} />
+              {/* Colour glow shadow — no filter:blur, radial-gradient is enough */}
+              <div style={{
+                position: 'absolute', bottom: '-24px', left: '15%', right: '15%', height: '50px',
+                background: `radial-gradient(ellipse, ${d.accent}55 0%, transparent 72%)`,
+                pointerEvents: 'none', transition: 'background 0.7s ease',
+              }} />
+            </div>
+          </div>
+
+          {/* TEXT */}
+          <div className="hf-text-wrap" style={{ zIndex: 6, flexShrink: 0 }}>
+
+            <div ref={tagRef} style={{
+              display: 'inline-flex', alignItems: 'center', gap: '7px',
+              marginBottom: '14px', opacity: 0, alignSelf: 'flex-start',
+            }}>
+              <span style={{ display: 'block', width: '24px', height: '1px', background: d.accent, transition: 'background 0.5s' }} />
+              <span style={{
+                fontSize: '8px', fontWeight: 700, letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: d.accent, transition: 'color 0.5s',
+              }}>{d.tag}</span>
+            </div>
+
+            <h2 ref={nameRef} style={{
+              fontFamily: "var(--font-display)",
+              fontSize: 'clamp(1.5rem, 5vw, 2.8rem)',
+              fontWeight: 700, color: 'var(--label-strong)',
+              lineHeight: 1.06, letterSpacing: '-0.03em',
+              margin: '0 0 14px', opacity: 0,
+            }}>{d.name}</h2>
+
+            <div style={{
+              width: '100%', height: '1px',
+              background: 'linear-gradient(90deg, rgb(var(--fg-rgb) / 0.12), transparent)',
+              marginBottom: '13px',
+            }} />
+
+            <p ref={taglineRef} style={{
+              fontSize: 'clamp(1rem, 3vw, 1.5rem)', fontWeight: '700',
+              color: 'var(--label-strong)', lineHeight: 1.2, margin: '0 0 7px',
+              fontStyle: 'normal', letterSpacing: '-0.01em', opacity: 0,
+            }}>{d.tagline}</p>
+
+            <p ref={subRef} style={{
+              fontSize: '12px', color: 'rgb(var(--fg-rgb) / 0.32)',
+              lineHeight: 1.7, margin: '0 0 18px', opacity: 0,
+            }}>{d.sub}</p>
+
+            {/* Mobile price — inline */}
+            <div ref={mobilePriceRef} className="hf-mobile-price" style={{ marginBottom: '20px', opacity: 0 }}>
+              <span style={{
+                fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em',
+                textTransform: 'uppercase', color: 'rgb(var(--fg-rgb) / 0.3)', marginRight: '10px',
+              }}>from</span>
+              <span style={{
+                fontSize: 'clamp(1.4rem, 6vw, 2.2rem)', fontWeight: 700,
+                fontFamily: "var(--font-display)",
+                color: d.accent, letterSpacing: '-0.03em',
+                textShadow: `0 0 30px ${d.accent}55`,
+                transition: 'color 0.5s ease, text-shadow 0.5s ease',
+              }}>
+                <PriceCounter value={d.price} color={d.accent} />
+              </span>
+            </div>
+
+            <div ref={ctaRef} style={{ opacity: 0 }}>
+              <CTAButton onClick={() => navigate('/menu')} accent={d.accent} />
+            </div>
+          </div>
+        </div>
+
+        {/* DESKTOP VERTICAL PRICE */}
+        <div ref={priceValRef} className="hf-desktop-only" style={{
+          position: 'absolute', right: '18px', top: '50%',
+          transform: 'translateY(-50%) rotate(90deg)',
+          transformOrigin: 'center center', zIndex: 10,
+          display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px',
+          opacity: 0, pointerEvents: 'none',
+        }}>
+          <div style={{ width: '28px', height: '1px', background: 'rgb(var(--fg-rgb) / 0.2)' }} />
+          <span style={{
+            fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em',
+            color: 'rgb(var(--fg-rgb) / 0.2)', textTransform: 'uppercase', whiteSpace: 'nowrap',
+          }}>from</span>
+          <span style={{
+            fontSize: 'clamp(1.2rem, 2vw, 2rem)', fontWeight: 700,
+            fontFamily: "var(--font-display)",
+            color: d.accent, letterSpacing: '-0.02em',
+            textShadow: `0 0 30px ${d.accent}55`,
+            transition: 'color 0.5s ease, text-shadow 0.5s ease',
+          }}>
+            <PriceCounter value={d.price} color={d.accent} />
+          </span>
+        </div>
+
+        {/* DISH NAV */}
+        <nav style={{
+          position: 'relative', zIndex: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 0 18px',
+          flexWrap: 'wrap', gap: '4px',
+        }}>
+          {dishes.map((dish, idx) => (
+            <DishTab
+              key={dish.id}
+              label={dish.short}
+              isActive={idx === active}
+              accent={dish.accent}
+              onClick={() => {
+                if (isMobileRef.current) {
+                  triggerDishTransition(idx);
+                  if (progressRef.current) progressRef.current.style.transform = `scaleX(${idx / (TOTAL - 1)})`;
+                  return;
+                }
+                const wrap = wrapRef.current;
+                if (!wrap) return;
+                const rect = wrap.getBoundingClientRect();
+                const wrapTop = window.scrollY + rect.top;
+                const scrollRange = TOTAL * window.innerHeight;
+                const target = wrapTop + (0.03 + (idx / (TOTAL - 1)) * 0.94) * scrollRange;
+                window.scrollTo({ top: target, behavior: 'smooth' });
+              }}
+            />
+          ))}
+        </nav>
+
+        {/* MOBILE: Tap-zone prev / next + swipe hint */}
+        <div className="hf-mobile-nav" style={{ pointerEvents: 'none' }}>
+          {/* Left tap zone */}
+          <button
+            className="hf-tap-zone hf-tap-prev"
+            aria-label="Previous dish"
+            onClick={() => {
+              const next = Math.max(activeRef.current - 1, 0);
+              triggerDishTransition(next);
+              if (progressRef.current) progressRef.current.style.transform = `scaleX(${next / (TOTAL - 1)})`;
+            }}
+            style={{
+              position: 'absolute', left: 0, top: '10%', bottom: '15%', width: '22%',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+              paddingLeft: '10px', zIndex: 8, pointerEvents: 'auto',
+              opacity: active === 0 ? 0 : 1, transition: 'opacity 0.3s',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--fg-rgb) / 0.25)" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6"/>
+            </svg>
+          </button>
+          {/* Right tap zone */}
+          <button
+            className="hf-tap-zone hf-tap-next"
+            aria-label="Next dish"
+            onClick={() => {
+              const next = Math.min(activeRef.current + 1, TOTAL - 1);
+              triggerDishTransition(next);
+              if (progressRef.current) progressRef.current.style.transform = `scaleX(${next / (TOTAL - 1)})`;
+            }}
+            style={{
+              position: 'absolute', right: 0, top: '10%', bottom: '15%', width: '22%',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+              paddingRight: '10px', zIndex: 8, pointerEvents: 'auto',
+              opacity: active === TOTAL - 1 ? 0 : 1, transition: 'opacity 0.3s',
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--fg-rgb) / 0.25)" strokeWidth="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+          {/* Dot indicators */}
+          <div style={{
+            position: 'absolute', bottom: '80px', left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex', gap: '8px', alignItems: 'center', zIndex: 9, pointerEvents: 'none',
+          }}>
+            {dishes.map((dish, idx) => (
+              <div key={dish.id} style={{
+                width: idx === active ? '20px' : '6px',
+                height: '6px',
+                borderRadius: '3px',
+                background: idx === active ? d.accent : 'rgb(var(--fg-rgb) / 0.2)',
+                transition: 'all 0.4s cubic-bezier(0.34,1.56,0.64,1)',
+                boxShadow: idx === active ? `0 0 8px ${d.accent}88` : 'none',
+              }} />
+            ))}
+          </div>
+          {/* Swipe hint — only shown on first load */}
+          <div style={{
+            position: 'absolute', bottom: '60px', right: 'clamp(16px, 5vw, 72px)',
+            zIndex: 10, display: 'flex', flexDirection: 'column',
+            alignItems: 'flex-end', gap: '4px', pointerEvents: 'none',
+            animation: 'hfPulse 2.4s ease-in-out infinite',
+          }}>
+            <span style={{
+              fontSize: '8px', fontWeight: '700', letterSpacing: '0.08em',
+              textTransform: 'uppercase', color: 'rgb(var(--fg-rgb) / 0.18)',
+            }}>swipe</span>
+            <svg width="18" height="10" viewBox="0 0 24 14" fill="none" stroke="rgb(var(--fg-rgb) / 0.18)" strokeWidth="2">
+              <path d="M2 7h20M15 2l7 5-7 5"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* DESKTOP scroll hint */}
+        <div className="hf-desktop-only" style={{
+          position: 'absolute', bottom: '20px', right: 'clamp(16px, 5vw, 72px)',
+          zIndex: 10, display: 'flex', flexDirection: 'column',
+          alignItems: 'flex-end', gap: '6px', pointerEvents: 'none',
+        }}>
+          <span style={{
+            fontSize: '8px', fontWeight: '700', letterSpacing: '0.08em',
+            textTransform: 'uppercase', color: 'rgb(var(--fg-rgb) / 0.12)',
+          }}>scroll</span>
+          <div style={{
+            width: '1px', height: '22px',
+            background: 'linear-gradient(to bottom, rgb(var(--fg-rgb) / 0.12), transparent)',
+            animation: 'hfPulse 2.2s ease-in-out infinite',
+          }} />
+        </div>
+
+        <style>{`
+          @keyframes hfPulse {
+            0%, 100% { opacity: 0.3; transform: scaleY(0.8); }
+            50% { opacity: 1; transform: scaleY(1); }
+          }
+
+          /* ── MOBILE (default) ── */
+          .hf-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            /* top padding accounts for nav bar + section label */
+            padding: 40px 20px 20px;
+            gap: 0;
+            /* Prevent content overflowing the sticky 100vh */
+            justify-content: center;
+          }
+          .hf-img-wrap {
+            width: 100%;
+            margin-bottom: 18px;
+          }
+          .hf-img-wrap img {
+            width: 100%;
+            /* Shorter ratio on mobile so text has room below */
+            aspect-ratio: 3 / 2;
+            max-height: 38vh;
+            object-fit: cover;
+            border-radius: 10px;
+          }
+          .hf-text-wrap {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          .hf-mobile-price { display: inline-flex !important; align-items: baseline; }
+          
+          .hf-mobile-nav { display: block; }
+
+          /* ── DESKTOP ── */
+          @media (min-width: 768px) {
+            .hf-stage {
+              flex-direction: row;
+              padding: 0 clamp(40px, 8vw, 100px);
+              justify-content: center;
+              align-items: center;
+              gap: clamp(24px, 4vw, 60px);
+            }
+            .hf-img-wrap {
+              flex: 1;
+              max-width: 620px;
+              margin-bottom: 0;
+            }
+            .hf-img-wrap img {
+              width: 100%;
+              aspect-ratio: 4 / 3;
+              max-height: none;
+              border-radius: 6px;
+            }
+            .hf-text-wrap {
+              width: clamp(240px, 28vw, 400px);
+            }
+            
+            .hf-mobile-nav { display: none; }
+            .hf-desktop-only { display: flex !important; }
+          }
+        `}</style>
+
+        {/* Layout flip per dish on desktop */}
+        <style>{`
+          @media (min-width: 768px) {
+            .hf-img-wrap  { order: ${isRight ? 2 : 1}; }
+            .hf-text-wrap { order: ${isRight ? 1 : 2}; }
+          }
+        `}</style>
+
+      </div>
+    </div>
+  );
+}
+
+/* ── Dish tab ── */
+function DishTab({ label, isActive, accent, onClick }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      aria-pressed={isActive}
+      style={{
+        background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+        padding: 'clamp(8px, 2vw, 12px) clamp(10px, 3vw, 22px)',
+        position: 'relative',
+        fontSize: 'clamp(8px, 2vw, 10px)',
+        fontWeight: isActive ? '800' : '500',
+        letterSpacing: isActive ? '0.25em' : '0.1em',
+        textTransform: 'uppercase',
+        color: isActive ? 'var(--label-strong)' : hov ? 'rgb(var(--fg-rgb) / 0.38)' : 'rgb(var(--fg-rgb) / 0.14)',
+        transition: 'color 0.3s ease, letter-spacing 0.3s ease',
+      }}
+    >
+      {label}
+      <span style={{
+        position: 'absolute', bottom: '5px', left: '50%',
+        transform: `translateX(-50%) scaleX(${isActive ? 1 : 0})`,
+        width: '70%', height: '1px', background: accent,
+        boxShadow: isActive ? `0 0 8px ${accent}` : 'none',
+        display: 'block', transformOrigin: 'center',
+        transition: 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), background 0.5s, box-shadow 0.5s',
+      }} />
+    </button>
+  );
+}
+
+/* ── CTA button ── */
+function CTAButton({ onClick, accent }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        background: 'none',
+        border: `1px solid ${hov ? 'rgb(var(--fg-rgb) / 0.5)' : 'rgb(var(--fg-rgb) / 0.15)'}`,
+        borderRadius: '100px',
+        padding: 'clamp(11px, 2vw, 14px) clamp(22px, 4vw, 32px)',
+        fontSize: 'clamp(9px, 2vw, 10px)', fontWeight: '700',
+        letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--label-strong)',
+        cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '10px',
+        transition: 'all 0.38s cubic-bezier(0.34,1.56,0.64,1)',
+        transform: hov ? 'translateY(-2px)' : 'translateY(0)',
+        boxShadow: hov ? '0 10px 36px rgba(0,0,0,0.4)' : 'none',
+        position: 'relative', overflow: 'hidden',
+      }}
+    >
+      <span style={{
+        position: 'absolute', inset: 0,
+        background: `linear-gradient(135deg, ${accent}20, ${accent}08)`,
+        opacity: hov ? 1 : 0, transition: 'opacity 0.3s ease', borderRadius: '100px',
+      }} />
+      <span style={{ position: 'relative', zIndex: 1 }}>View Full Menu</span>
+      <span style={{
+        position: 'relative', zIndex: 1, display: 'inline-block',
+        transform: hov ? 'translateX(5px)' : 'translateX(0)',
+        transition: 'transform 0.35s cubic-bezier(0.34,1.56,0.64,1)',
+      }}>→</span>
+    </button>
+  );
+}
+
