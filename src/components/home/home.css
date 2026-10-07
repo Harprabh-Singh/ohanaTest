@@ -60,21 +60,25 @@
 .hc-dice i:nth-child(4) { left: 3px; bottom: 3px; } .hc-dice i:nth-child(5) { right: 3px; bottom: 3px; }
 .hc-root.is-shuffling .hc-dice { animation: hRoll .5s linear infinite; }
 
-.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 9deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: pan-y; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; }
+/* touch-action: none lets pointer events fire even during a vertical scroll attempt;
+   the JS drag handler itself decides whether the gesture is horizontal or vertical. */
+.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 9deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; contain: layout style; }
 .hc-fan:active { cursor: grabbing; }
 .hc-fan:focus-visible .hc-card.is-active .hc-card__face { outline: 2px solid var(--tint); outline-offset: 6px; }
 .hc-table { position: absolute; left: 50%; bottom: -60%; width: min(1200px, 120vw); aspect-ratio: 2.4 / 1; transform: translateX(-50%); border-radius: 50%; border: 1px dashed rgb(var(--fg-rgb) / 0.12); background: radial-gradient(closest-side, rgb(var(--fg-rgb) / 0.035), transparent); pointer-events: none; }
-.hc-card { position: absolute; left: 50%; bottom: 110px; width: var(--cw); aspect-ratio: 5 / 7; margin-left: calc(var(--cw) / -2); padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% var(--origin);
-  transform: translateY(70%) rotate(0deg) scale(0.8); opacity: 0;
-  transition: transform .85s cubic-bezier(.2,.9,.25,1), opacity .5s; transition-delay: var(--deal); will-change: transform, opacity; }
+/* Deal-in: cards start stacked/hidden and fly out. After .is-dealt the spring
+   takes over all transforms imperatively — no CSS transition fights it.       */
+.hc-card { position: absolute; left: 50%; bottom: 110px; width: var(--cw); aspect-ratio: 5 / 7; margin-left: calc(var(--cw) / -2); padding: 0; border: 0; background: none; cursor: pointer; transform-origin: 50% var(--origin); transform: translateY(70%) rotate(0deg) scale(0.8); opacity: 0; transition: transform .85s cubic-bezier(.2,.9,.25,1), opacity .5s; transition-delay: var(--deal); will-change: transform, opacity; }
+/* Initial deal-in target position (spring overrides immediately after settling) */
 .hc-root.is-dealt .hc-card { opacity: calc(1 - var(--abs) * 0.08); transform: rotate(calc(var(--off) * var(--step))) translateY(calc(var(--abs) * 6px)) scale(calc(1 - var(--abs) * 0.04)); }
-.hc-root.is-dealt .hc-card.is-active { opacity: 1; transform: rotate(0deg) translateY(-34px) scale(1.1); }
-.hc-root.is-dealt.is-settled .hc-card { transition-delay: 0ms; }
-.hc-card__face { position: absolute; inset: 0; display: block; border-radius: 20px; overflow: hidden; background: var(--bg-3); box-shadow: 0 24px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08); transition: transform .45s cubic-bezier(.2,.8,.2,1), box-shadow .45s; will-change: transform, box-shadow; }
-.hc-card:not(.is-active):hover .hc-card__face { transform: translateY(-18px); }
-.hc-card.is-active .hc-card__face { box-shadow: 0 40px 90px rgba(0,0,0,0.6), 0 0 0 2px var(--card), 0 0 60px color-mix(in srgb, var(--card) 35%, transparent); }
-.hc-card__face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); transition: transform 1.2s cubic-bezier(.2,.8,.2,1), filter .6s; filter: saturate(.75) brightness(.7); pointer-events: none; will-change: transform, filter; }
-.hc-card.is-active .hc-card__face img { transform: scale(1); filter: none; }
+.hc-root.is-dealt .hc-card.is-active { opacity: 1; transform: rotate(0deg) translateY(-24px) scale(1.12); }
+/* Once settled, remove CSS transitions so spring writes are instant/direct */
+.hc-root.is-dealt.is-settled .hc-card { transition: none !important; will-change: auto; }
+/* Face: no transitions — spring manages box-shadow imperatively */
+.hc-card__face { position: absolute; inset: 0; display: block; border-radius: 20px; overflow: hidden; background: var(--bg-3); box-shadow: 0 14px 36px rgba(0,0,0,0.48), 0 0 0 1px rgba(255,255,255,0.08); will-change: transform; }
+/* Image: no transitions after settle — spring manages scale/opacity imperatively */
+.hc-card__face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transform: scale(1.12); opacity: 0.62; pointer-events: none; will-change: transform, opacity; }
+.hc-root.is-dealt.is-settled .hc-card__face img { transition: none !important; }
 .hc-card__scrim { position: absolute; inset: 0; background: linear-gradient(to top, rgba(10,6,4,0.92) 0%, rgba(10,6,4,0.2) 50%, rgba(10,6,4,0.35) 100%); }
 .hc-card__pip { position: absolute; top: 14px; left: 14px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #FFFAF2; }
 .hc-card__suit { position: absolute; top: 14px; right: 14px; width: 14px; height: 14px; background: var(--card); clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
@@ -92,17 +96,17 @@
 /* ─── Signatures (horizontal rail) ───────────────────────── */
 .hs-root { position: relative; overflow: hidden; height: 100vh; min-height: 640px; }
 .hs-mobile-head { display: none; }
-.hs-track { display: flex; align-items: center; gap: 28px; height: 100%; width: max-content; padding: 0 clamp(20px, 5vw, 72px); will-change: transform; }
+.hs-track { display: flex; align-items: center; gap: 28px; height: 100%; width: max-content; padding: 0 clamp(20px, 5vw, 72px); }
 .hs-intro { flex: 0 0 min(36vw, 540px); padding-right: 3vw; }
 .hs-intro__copy { margin: 26px 0 0; max-width: 34ch; font-size: 17px; line-height: 1.6; color: var(--label-2); }
 .hs-hint { display: inline-flex; align-items: center; gap: 10px; margin-top: 34px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 .hs-hint i { font-style: normal; animation: hNudge 1.6s ease-in-out infinite; }
-.hs-card { position: relative; flex: 0 0 clamp(340px, 33vw, 500px); height: min(70vh, 660px); border-radius: 28px; overflow: hidden; background: var(--bg-2); box-shadow: 0 40px 120px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); transition: transform .6s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; will-change: transform; }
+.hs-card { position: relative; flex: 0 0 clamp(340px, 33vw, 500px); height: min(70vh, 660px); border-radius: 28px; overflow: hidden; background: var(--bg-2); box-shadow: 0 40px 120px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.06); transition: transform .6s cubic-bezier(.2,.8,.2,1); transform-style: preserve-3d; }
 .hs-track > article:nth-of-type(even) { margin-top: 9vh; }
 .hs-track > article:nth-of-type(odd) { margin-bottom: 9vh; }
 .hs-card__media { position: absolute; inset: 0; overflow: hidden; }
 .hs-card__media::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to top, rgba(5,7,12,0.94) 0%, rgba(5,7,12,0.45) 38%, transparent 64%); }
-.hs-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.18); transition: filter .5s; will-change: transform; }
+.hs-card__img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.18); transition: filter .5s; }
 .hs-card:hover .hs-card__img { filter: brightness(1.08) saturate(1.08); }
 .hs-card__shine { position: absolute; inset: 0; z-index: 1; background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 30%), rgba(255,240,210,0.16), transparent 45%); opacity: 0; transition: opacity .4s; pointer-events: none; }
 .hs-card:hover .hs-card__shine { opacity: 1; }
@@ -129,7 +133,7 @@
 .hs-hud__rail i { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
 
 /* ─── Story ──────────────────────────────────────────────── */
-.hy-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 180px) 0 clamp(90px, 12vh, 140px); }
+.hy-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 180px) 0 clamp(90px, 12vh, 140px); content-visibility: auto; contain-intrinsic-size: 0 800px; }
 .hy-manifesto { margin: 28px 0 0; max-width: 1120px; font-family: var(--font-display); font-weight: 700; font-size: clamp(1.9rem, 4.2vw, 4.2rem); line-height: 1.1; letter-spacing: -0.035em; color: var(--label-strong); }
 .hy-word.is-hot { color: var(--accent); }
 .hy-stage { margin-top: clamp(72px, 10vh, 120px); }
@@ -152,7 +156,7 @@
 .hy-cta { margin-top: 56px; }
 
 /* ─── Moments (accordion) ────────────────────────────────── */
-.hm-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 170px) 0; }
+.hm-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 170px) 0; content-visibility: auto; contain-intrinsic-size: 0 900px; }
 .hm-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 40px; margin-bottom: clamp(40px, 6vh, 64px); }
 .hm-head__side { max-width: 340px; }
 .hm-head__side p { margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: var(--label-2); }
@@ -176,7 +180,7 @@
 .hm-deck.is-paused .hm-panel__progress { animation-play-state: paused; }
 
 /* ─── Reviews ────────────────────────────────────────────── */
-.hr-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 170px) 0 clamp(110px, 16vh, 170px); }
+.hr-root { position: relative; overflow: hidden; padding: clamp(110px, 16vh, 170px) 0 clamp(110px, 16vh, 170px); content-visibility: auto; contain-intrinsic-size: 0 800px; }
 .hr-grid { display: grid; grid-template-columns: minmax(260px, 0.8fr) 1.7fr; gap: clamp(40px, 6vw, 96px); align-items: start; }
 .hr-big { margin: 18px 0 8px; font-family: var(--font-display); font-weight: 700; font-size: clamp(7rem, 14vw, 13rem); line-height: 0.85; letter-spacing: -0.065em; background: linear-gradient(180deg, #FFE7B0 0%, var(--accent) 55%, #A8741F 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .hr-stars { position: relative; display: inline-block; font-size: 26px; letter-spacing: 4px; line-height: 1; }
@@ -283,11 +287,16 @@
   .hc-top { grid-template-columns: 1fr; gap: 28px; }
   .hc-detail { padding: 24px 22px; min-height: 0; }
   .hc-detail::before { left: 22px; }
+  /* Smaller card size for mobile — spring handles all motion */
   .hc-fan { --cw: 150px; --step: 11deg; --origin: 300%; margin-top: 52px; height: calc(var(--cw) * 1.42 + 130px); }
   .hc-card { bottom: 86px; }
-  .hc-root.is-dealt .hc-card.is-active { transform: rotate(0deg) translateY(-24px) scale(1.12); }
+  /* Deal-in only: shrink transition duration on mobile for faster reveal */
+  .hc-root:not(.is-settled) .hc-card { transition-duration: .5s !important; }
+  /* Spring writes these imperatively — no CSS overrides needed after settle */
   .hc-card__name { font-size: 1.15rem; bottom: 30px; left: 12px; }
   .hc-card__hint { left: 12px; font-size: 9px; }
+  /* Disable backdrop-filter on mobile — very expensive */
+  .hs-chip { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: rgba(7,11,20,0.75) !important; }
   .hy-frame { height: min(130vw, 600px); }
   .hy-quote { bottom: 150px; font-size: 1.5rem; }
   .hy-stats { gap: 10px; }
@@ -297,7 +306,7 @@
   .hy-line, .hy-node__dot { display: none; }
   .hm-head { flex-direction: column; align-items: flex-start; gap: 20px; }
   .hm-deck { flex-direction: column; height: auto; gap: 10px; }
-  .hm-panel { flex: none !important; height: 84px; transition: height .9s cubic-bezier(.7,0,.2,1); }
+  .hm-panel { flex: none !important; height: 84px; transition: height .6s cubic-bezier(.4,0,.2,1); }
   .hm-panel.is-on { height: min(118vw, 470px); }
   .hm-panel__id { top: 50%; transform: translateY(-50%); }
   .hm-panel.is-on .hm-panel__id { top: 20px; transform: none; }
