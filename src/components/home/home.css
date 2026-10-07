@@ -36,7 +36,17 @@
     radial-gradient(900px 520px at 50% 92%, color-mix(in srgb, var(--tint) 30%, transparent), transparent 70%),
     radial-gradient(700px 500px at 100% 0%, color-mix(in srgb, var(--tint) 12%, transparent), transparent 70%); }
 .hc-top { display: grid; grid-template-columns: 1.1fr 1fr; gap: 48px clamp(40px, 6vw, 100px); align-items: start; }
-.hc-intro .h-display { margin-top: 22px; }
+.hc-intro .h-display {
+  margin-top: 18px;
+  /* Hero heading: bigger, tighter, with a warm gradient sweep */
+  font-size: clamp(3rem, 6.5vw, 6.2rem);
+  letter-spacing: -0.05em;
+  line-height: 0.92;
+  background: linear-gradient(170deg, #FFFAF2 30%, var(--tint) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 .hc-crave { color: var(--tint); transition: color .8s; }
 .hc-lede { margin: 24px 0 0; max-width: 36ch; font-size: 17px; line-height: 1.6; color: var(--label-2); }
 .hc-detail { position: relative; padding: 30px 32px; border-radius: 28px; background: linear-gradient(160deg, rgb(var(--fg-rgb) / 0.07), rgb(var(--fg-rgb) / 0.02)); border: 1px solid var(--hairline); min-height: 300px; display: flex; flex-direction: column; }
@@ -60,9 +70,8 @@
 .hc-dice i:nth-child(4) { left: 3px; bottom: 3px; } .hc-dice i:nth-child(5) { right: 3px; bottom: 3px; }
 .hc-root.is-shuffling .hc-dice { animation: hRoll .5s linear infinite; }
 
-/* touch-action: none lets pointer events fire even during a vertical scroll attempt;
-   the JS drag handler itself decides whether the gesture is horizontal or vertical. */
-.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 9deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: none; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; contain: layout style; }
+/* pan-y: browser handles vertical scroll freely; JS takes over only when horizontal intent is confirmed */
+.hc-fan { --cw: clamp(190px, 17vw, 250px); --step: 9deg; --origin: 340%; position: relative; height: calc(var(--cw) * 1.42 + 160px); margin-top: clamp(56px, 8vh, 90px); touch-action: pan-y; cursor: grab; outline: none; user-select: none; -webkit-user-select: none; contain: layout style; }
 .hc-fan:active { cursor: grabbing; }
 .hc-fan:focus-visible .hc-card.is-active .hc-card__face { outline: 2px solid var(--tint); outline-offset: 6px; }
 .hc-table { position: absolute; left: 50%; bottom: -60%; width: min(1200px, 120vw); aspect-ratio: 2.4 / 1; transform: translateX(-50%); border-radius: 50%; border: 1px dashed rgb(var(--fg-rgb) / 0.12); background: radial-gradient(closest-side, rgb(var(--fg-rgb) / 0.035), transparent); pointer-events: none; }
@@ -285,6 +294,15 @@
 }
 @media (max-width: 900px) {
   .hc-top { grid-template-columns: 1fr; gap: 28px; }
+  /* Centre the whole intro block on mobile */
+  .hc-intro { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  /* Hero heading: full-width, even bigger on mobile */
+  .hc-intro .h-display {
+    font-size: clamp(3.4rem, 11vw, 5rem);
+    letter-spacing: -0.055em;
+    line-height: 0.9;
+  }
+  .hc-lede { max-width: 100%; text-align: center; }
   .hc-detail { padding: 24px 22px; min-height: 0; }
   .hc-detail::before { left: 22px; }
   /* Smaller card size for mobile — spring handles all motion */

@@ -180,13 +180,15 @@ export default function Cravings() {
 
   /* ── Pointer drag — finger follows cards, spring + inertia on release ── */
   const onDown = (e) => {
-    try { fan.current?.setPointerCapture(e.pointerId); } catch (_) {}
+    /* Don't capture here — wait until we know it's a horizontal swipe.
+       Capturing immediately blocks vertical scroll on the whole section. */
     spring.current.stop();
     drag.current = {
       x: e.clientX, y: e.clientY,
-      on: true, moved: false,
+      on: true, moved: false, captured: false,
       startOffset: offsetRef.current,
       lastX: e.clientX, velX: 0, lastT: performance.now(),
+      pointerId: e.pointerId,
     };
   };
 
@@ -195,15 +197,31 @@ export default function Cravings() {
     if (!d.on) return;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
-    /* Abandon drag if vertical scroll intent is detected */
-    if (!d.moved && Math.abs(dy) > Math.abs(dx) + 8) { d.on = false; return; }
-    if (Math.abs(dx) > 8) d.moved = true;
+
+    /* If vertical intent is stronger, release control to native scroll */
+    if (!d.moved && Math.abs(dy) > Math.abs(dx) + 8) {
+      d.on = false;
+      return;
+    }
+
+    if (Math.abs(dx) > 8) {
+      d.moved = true;
+      /* Only capture once we are sure it's a horizontal swipe —
+         this prevents the browser from scrolling mid-drag          */
+      if (!d.captured) {
+        try { fan.current?.setPointerCapture(d.pointerId); } catch (_) {}
+        d.captured = true;
+      }
+    }
     if (!d.moved) return;
 
-    /* Track velocity for flick on release */
+    /* Track velocity for flick on release — exponential decay so a
+       slow pause before lifting doesn't carry stale fast velocity  */
     const now = performance.now();
     const dt = Math.max(1, now - d.lastT);
-    d.velX = (e.clientX - d.lastX) / dt;   // px / ms
+    const instantV = (e.clientX - d.lastX) / dt;   // px / ms
+    /* Blend toward instant: if finger slows/stops, velocity decays to 0 */
+    d.velX = dt > 80 ? 0 : instantV * 0.6 + d.velX * 0.4;
     d.lastX = e.clientX;
     d.lastT = now;
 
@@ -228,16 +246,23 @@ export default function Cravings() {
     const d = drag.current;
     if (!d.on) return;
     d.on = false;
-    try { fan.current?.releasePointerCapture(e?.pointerId ?? 0); } catch (_) {}
-    if (!d.moved) return;
+    if (d.captured) {
+      try { fan.current?.releasePointerCapture(d.pointerId ?? 0); } catch (_) {}
+    }    if (!d.moved) return;
 
-    /* Seed spring with swipe velocity for natural momentum */
-    const flickCards = -d.velX * 110;
-    const rawTarget = offsetRef.current + flickCards;
-    const target = Math.max(0, Math.min(N - 1, Math.round(rawTarget)));
+    /* Flick: convert px/ms velocity → extra cards, capped at ±2.
+       A typical fast swipe is ~0.8 px/ms → 0.8 * 1.5 ≈ 1.2 → rounds to 1 card.
+       We never jump more than 2 cards from wherever the drag physically landed. */
+    const FLICK_SCALE = 1.5;        // px/ms → card units
+    const MAX_FLICK   = 2;          // never jump more than 2 cards via velocity
+    const flickCards  = Math.max(-MAX_FLICK, Math.min(MAX_FLICK, -d.velX * FLICK_SCALE));
+    const rawTarget   = offsetRef.current + flickCards;
+    const target      = Math.max(0, Math.min(N - 1, Math.round(rawTarget)));
 
+    /* Let the spring snap cleanly — no extra velocity seed, the
+       stiffness/damping already gives a natural deceleration curve. */
     spring.current.pos = offsetRef.current;
-    spring.current.vel = -d.velX * 4.5;
+    spring.current.vel = 0;
     snapTo(target);
   };
 
